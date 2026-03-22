@@ -1,0 +1,78 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+@import "tailwindcss";
+
+:root {
+  --bg-color: #FDFBF7;
+  --card-bg: #FFFFFF;
+  --text-primary: #1C1C1E;
+  --text-secondary: #8E8E93;
+  --primary-yellow: #FCD371;
+  --dark-charcoal: #1C1C1E;
+  --pastel-green: #B5E4CA;
+  --pastel-purple: #C4B5E4;
+  --pastel-orange: #F4C4A4;
+  --pastel-blue: #A4C4F4;
+  --border-radius-lg: 24px;
+  --border-radius-md: 16px;
+  --border-radius-sm: 12px;
+  --border-radius-pill: 9999px;
+}
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Element Plus Overrides */
+:root {
+  --el-color-primary: var(--dark-charcoal);
+  --el-color-primary-light-3: #3a3a3c;
+  --el-color-primary-light-5: #48484a;
+  --el-color-primary-light-7: #636366;
+  --el-color-primary-light-8: #8e8e93;
+  --el-color-primary-light-9: #aeaeb2;
+  --el-color-primary-dark-2: #000000;
+  
+  --el-border-radius-base: var(--border-radius-md);
+  --el-border-radius-small: var(--border-radius-sm);
+  --el-border-radius-round: var(--border-radius-pill);
+  
+  --el-bg-color-page: var(--bg-color);
+  --el-bg-color: var(--card-bg);
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-secondary);
+}
+
+.el-button {
+  font-weight: 700;
+  border-radius: var(--border-radius-pill);
+}
+
+.el-button--primary {
+  background-color: var(--dark-charcoal);
+  border-color: var(--dark-charcoal);
+  color: #fff;
+}
+
+.el-button--primary.is-plain {
+  background-color: var(--primary-yellow);
+  border-color: var(--primary-yellow);
+  color: var(--dark-charcoal);
+}
+
+.el-card {
+  border-radius: var(--border-radius-lg);
+  border: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+
+.el-card__header {
+  border-bottom: none;
+  padding-bottom: 0;
+}
