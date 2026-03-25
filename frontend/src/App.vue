@@ -63,7 +63,7 @@ import AppHeader from './components/AppHeader.vue';
     padding: 16px;
     padding-bottom: 80px;
   }
-
+  
   .mobile-tab-bar {
     display: flex;
     position: fixed;
@@ -80,7 +80,7 @@ import AppHeader from './components/AppHeader.vue';
     border-top-left-radius: 20px;
     border-top-right-radius: 20px;
   }
-
+  
   .tab-item {
     display: flex;
     flex-direction: column;
@@ -94,16 +94,16 @@ import AppHeader from './components/AppHeader.vue';
     border-radius: var(--border-radius-sm);
     transition: all 0.2s ease;
   }
-
+  
   .tab-item .el-icon {
     font-size: 20px;
     margin-bottom: 2px;
   }
-
+  
   .tab-item.active {
     color: var(--dark-charcoal);
   }
-
+  
   .tab-item.active .el-icon {
     color: var(--dark-charcoal);
     transform: scale(1.1);
