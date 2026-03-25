@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 8080;
 
 // 中间件
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: process.env.CORS_ORIGIN || ['http://localhost:5173', 'http://localhost:3000'],
   credentials: true
 }));
 app.use(bodyParser.json());
@@ -53,4 +53,5 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
 

@@ -1,6 +1,14 @@
 const pool = require('../config/database');
 const { successResponse, errorResponse } = require('../utils/helpers');
-const { v4: uuidv4 } = require('uuid');
+
+// 懒加载，避免启动时因环境变量未加载而报错
+function getAIClient() {
+  const OpenAI = require('openai');
+  return new OpenAI({
+    apiKey: process.env.DASHSCOPE_API_KEY || 'sk-05af025bf26d420e9d115f3442e8ca19',
+    baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+  });
+}
 
 // 发送消息到 AI 助手
 const chatWithAI = async (req, res) => {
@@ -19,7 +27,7 @@ const chatWithAI = async (req, res) => {
 
       // 如果没有提供对话ID，创建新对话
       if (!convId) {
-        convId = uuidv4();
+        convId = crypto.randomUUID();
         await connection.query(
           'INSERT INTO ai_conversations (id, user_id) VALUES (?, ?)',
           [convId, userId]
@@ -32,9 +40,28 @@ const chatWithAI = async (req, res) => {
         [convId, 'user', message]
       );
 
-      // 这里应该调用真实的 AI API（如 Google Gemini）
-      // 现在仅作演示，返回模拟响应
-      const aiResponse = `感谢您的提问！关于"${message}"，我建议您查阅相关宠物护理指南。`;
+      // 调用阿里云百炼 API
+      let aiResponse;
+      try {
+        const openai = getAIClient();
+        const completion = await openai.chat.completions.create({
+          model: 'qwen-plus',
+          messages: [
+            {
+              role: 'system',
+              content: '你是一名专业的宠物专家，负责回答用户关于宠物护理、健康、行为训练等问题。你的回答应该专业、友好且易于理解。请使用中文回答。'
+            },
+            {
+              role: 'user',
+              content: message
+            }
+          ]
+        });
+        aiResponse = completion.choices[0]?.message?.content || '抱歉，我现在无法回答这个问题。';
+      } catch (aiError) {
+        console.error('百炼 API Error:', aiError);
+        aiResponse = '抱歉，AI 助手暂时不可用，请稍后再试。';
+      }
 
       // 保存 AI 响应
       await connection.query(
@@ -102,4 +129,3 @@ module.exports = {
   chatWithAI,
   getConversation
 };
-

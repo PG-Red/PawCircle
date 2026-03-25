@@ -28,9 +28,38 @@ const sendVerificationCode = async (req, res) => {
     verificationCodes.set(`${email}_time`, Date.now());
     verificationCodes.set(`${email}_expires`, expiresAt);
 
-    // 这里应该发送邮件，现在仅作演示
-    console.log(`验证码已发送到 ${email}: ${code}`);
+    // 发送邮件
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.163.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.MAIL_USER || 'qq1742383050@163.com',
+        pass: process.env.MAIL_PASS || 'ZLi4PcEC8aL6kgDe'
+      }
+    });
 
+    await transporter.sendMail({
+      from: `"PawCircle" <${process.env.MAIL_USER || 'qq1742383050@163.com'}>`,
+      to: email,
+      subject: 'PawCircle 注册验证码',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px; border-radius: 12px; background: #fffef7; border: 1px solid #f0e9c0;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <span style="font-size: 40px;">🐾</span>
+            <h2 style="margin: 8px 0 0; color: #1a1a1a; font-size: 22px;">PawCircle</h2>
+          </div>
+          <p style="color: #555; font-size: 15px; margin-bottom: 8px;">你好！</p>
+          <p style="color: #555; font-size: 15px;">你的注册验证码为：</p>
+          <div style="text-align: center; margin: 24px 0;">
+            <span style="display: inline-block; font-size: 36px; font-weight: bold; letter-spacing: 12px; color: #1a1a1a; background: #ffd700; padding: 12px 24px; border-radius: 8px;">${code}</span>
+          </div>
+          <p style="color: #888; font-size: 13px;">验证码 10 分钟内有效，请勿泄露给他人。</p>
+        </div>
+      `
+    });
+
+    console.log(`验证码已发送到 ${email}: ${code}`);
     res.json(successResponse(null, '验证码已发送'));
   } catch (error) {
     console.error(error);
