@@ -3,7 +3,7 @@ import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { Message, Lock, User, Key } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
-import { authApi } from '../../services/api';
+import { authApi, userApi } from '@/api/index';
 
 const router = useRouter();
 const isLogin = ref(true);
@@ -30,6 +30,7 @@ const sendCode = async () => {
 };
 
 const handleLogin = async () => {
+  if (loginLoading.value) return;
   if (!loginForm.email || !loginForm.password) { ElMessage.warning('请填写完整信息'); return; }
   loginLoading.value = true;
   try {
@@ -38,6 +39,12 @@ const handleLogin = async () => {
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('userId', String(res.data.id));
       localStorage.setItem('username', res.data.username);
+      // 登录后拉取用户信息，同步头像
+      try {
+        const profile = await userApi.getProfile();
+        if (profile.data?.avatar) localStorage.setItem('avatar', profile.data.avatar);
+        else localStorage.removeItem('avatar');
+      } catch {}
       ElMessage.success('登录成功');
       router.push('/');
     } else { ElMessage.error(res.message || '登录失败'); }
@@ -72,24 +79,24 @@ const handleRegister = async () => {
         <h2>{{ isLogin ? '登录 PawCircle' : '注册 PawCircle' }}</h2>
         <p>{{ isLogin ? '欢迎回来，铲屎官！' : '加入我们，和毛孩子们一起玩耍！' }}</p>
       </div>
-      <el-form v-if="isLogin" :model="loginForm" class="auth-form">
-        <el-form-item><el-input v-model="loginForm.email" placeholder="邮箱" :prefix-icon="Message" size="large" /></el-form-item>
-        <el-form-item><el-input v-model="loginForm.password" type="password" placeholder="密码" :prefix-icon="Lock" size="large" show-password /></el-form-item>
-        <el-button type="primary" class="submit-btn" size="large" :loading="loginLoading" @click="handleLogin">登录</el-button>
+      <el-form v-if="isLogin" :model="loginForm" class="auth-form" @submit.prevent="handleLogin">
+        <el-form-item><el-input v-model="loginForm.email" placeholder="邮箱" :prefix-icon="Message" size="large" @keyup.enter="handleLogin" /></el-form-item>
+        <el-form-item><el-input v-model="loginForm.password" type="password" placeholder="密码" :prefix-icon="Lock" size="large" show-password @keyup.enter="handleLogin" /></el-form-item>
+        <el-button type="primary" native-type="submit" class="submit-btn" size="large" :loading="loginLoading">登录</el-button>
       </el-form>
-      <el-form v-else :model="registerForm" class="auth-form">
-        <el-form-item><el-input v-model="registerForm.username" placeholder="用户名" :prefix-icon="User" size="large" /></el-form-item>
-        <el-form-item><el-input v-model="registerForm.email" placeholder="邮箱" :prefix-icon="Message" size="large" /></el-form-item>
+      <el-form v-else :model="registerForm" class="auth-form" @submit.prevent="handleRegister">
+        <el-form-item><el-input v-model="registerForm.username" placeholder="用户名" :prefix-icon="User" size="large" @keyup.enter="handleRegister" /></el-form-item>
+        <el-form-item><el-input v-model="registerForm.email" placeholder="邮箱" :prefix-icon="Message" size="large" @keyup.enter="handleRegister" /></el-form-item>
         <el-form-item>
           <div class="verify-code-wrapper">
-            <el-input v-model="registerForm.code" placeholder="邮箱验证码" :prefix-icon="Key" size="large" />
+            <el-input v-model="registerForm.code" placeholder="邮箱验证码" :prefix-icon="Key" size="large" @keyup.enter="handleRegister" />
             <el-button class="send-code-btn" size="large" :disabled="countdown > 0 || sendCodeLoading" :loading="sendCodeLoading" @click="sendCode">
               {{ countdown > 0 ? `${countdown}s 后重发` : '获取验证码' }}
             </el-button>
           </div>
         </el-form-item>
-        <el-form-item><el-input v-model="registerForm.password" type="password" placeholder="密码" :prefix-icon="Lock" size="large" show-password /></el-form-item>
-        <el-button type="primary" class="submit-btn" size="large" :loading="registerLoading" @click="handleRegister">注册</el-button>
+        <el-form-item><el-input v-model="registerForm.password" type="password" placeholder="密码" :prefix-icon="Lock" size="large" show-password @keyup.enter="handleRegister" /></el-form-item>
+        <el-button type="primary" native-type="submit" class="submit-btn" size="large" :loading="registerLoading">注册</el-button>
       </el-form>
       <div class="auth-footer">
         <span class="toggle-text" @click="isLogin = !isLogin">

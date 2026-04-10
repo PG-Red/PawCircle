@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Pet } from '../../services/api';
+import type { Pet } from '@/api/index';
 
 const props = defineProps<{ pet: Pet }>();
 const emit = defineEmits<{
@@ -13,6 +13,11 @@ const calcAge = (birthday: string) => {
   if (!birthday) return '未知';
   const years = new Date().getFullYear() - new Date(birthday).getFullYear();
   return years > 0 ? `${years}岁` : '不足1岁';
+};
+
+const formatBirthday = (birthday: string) => {
+  if (!birthday) return '-';
+  return birthday.slice(0, 10);
 };
 </script>
 
@@ -35,7 +40,7 @@ const calcAge = (birthday: string) => {
         </div>
         <div class="detail-item">
           <span class="label">生日</span>
-          <span class="value">{{ pet.birthday }}</span>
+          <span class="value">{{ formatBirthday(pet.birthday) }}</span>
         </div>
       </div>
       <div class="pet-actions">

@@ -1,15 +1,23 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Picture } from '@element-plus/icons-vue';
-import { momentApi } from '../../services/api';
+import { momentApi } from '../../api/index';
+import { eventBus } from '../../utils/eventBus';
 
 const emit = defineEmits<{ (e: 'created'): void }>();
 const content = ref('');
 const imageUrl = ref('');
 const submitting = ref(false);
 const fileInputRef = ref<HTMLInputElement | null>(null);
-const avatarUrl = localStorage.getItem('avatar') || 'https://picsum.photos/seed/me/100/100';
+const DEFAULT_AVATAR = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%23FBBF24'/><text font-size='56' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='central'>🐾</text></svg>`;
+const currentAvatar = ref(localStorage.getItem('avatar') || DEFAULT_AVATAR);
+const avatarUrl = computed(() => currentAvatar.value || DEFAULT_AVATAR);
+
+const syncAvatar = (url?: unknown) => {
+  const nextAvatar = typeof url === 'string' ? url : localStorage.getItem('avatar');
+  currentAvatar.value = nextAvatar || DEFAULT_AVATAR;
+};
 
 const triggerUpload = () => fileInputRef.value?.click();
 const handleImageUpload = (e: Event) => {
@@ -18,7 +26,19 @@ const handleImageUpload = (e: Event) => {
   if (!file.type.startsWith('image/')) { ElMessage.warning('请选择图片文件'); return; }
   if (file.size > 5 * 1024 * 1024) { ElMessage.warning('图片大小不能超过 5MB'); return; }
   const reader = new FileReader();
-  reader.onload = ev => { imageUrl.value = ev.target?.result as string; };
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 800;
+      const scale = Math.min(MAX / img.width, MAX / img.height, 1);
+      canvas.width  = img.width  * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      imageUrl.value = canvas.toDataURL('image/jpeg', 0.8);
+    };
+    img.src = ev.target?.result as string;
+  };
   reader.readAsDataURL(file);
   (e.target as HTMLInputElement).value = '';
 };
@@ -41,6 +61,18 @@ const handleSubmit = async () => {
     submitting.value = false;
   }
 };
+
+onMounted(() => {
+  eventBus.on('avatar-changed', syncAvatar);
+});
+
+onUnmounted(() => {
+  eventBus.off('avatar-changed', syncAvatar);
+});
+</script>
+
+<script lang="ts">
+export default { name: 'CreateMoment' };
 </script>
 
 <template>

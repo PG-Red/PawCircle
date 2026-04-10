@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed, useAttrs } from 'vue';
 import { ChatRound, Star, Share, MoreFilled, Delete, Warning } from '@element-plus/icons-vue';
+import ConfirmDialog from '../../components/ConfirmDialog.vue';
 
 interface Moment {
   id: number;
@@ -11,36 +12,74 @@ interface Moment {
   image?: string;
   likes?: number;
   isLiked?: boolean;
+  comments_count?: number;
+  hasCommented?: boolean;
+  user?: { id: number };
 }
 
 const props = defineProps<{ moment: Moment }>();
+const attrs = useAttrs();
 const emit = defineEmits<{
   (e: 'delete', id: number): void;
   (e: 'report', id: number): void;
   (e: 'comment', id: number): void;
   (e: 'like', id: number): void;
+  (e: 'user-click', userId: number): void;
 }>();
 
 const menuOpen = ref(false);
-const liked = ref(props.moment.isLiked ?? false);
-const likesCount = ref(props.moment.likes ?? 0);
+const deleteDialogVisible = ref(false);
+const liked = computed(() => props.moment.isLiked ?? false);
+const likesCount = computed(() => props.moment.likes ?? 0);
 
 const toggleMenu = (e: Event) => { e.stopPropagation(); menuOpen.value = !menuOpen.value; };
 const closeMenu = () => { menuOpen.value = false; };
-const onDelete = () => { menuOpen.value = false; emit('delete', props.moment.id); };
+const onDelete = () => { menuOpen.value = false; deleteDialogVisible.value = true; };
 const onReport = () => { menuOpen.value = false; emit('report', props.moment.id); };
 const onComment = () => { emit('comment', props.moment.id); };
-const onLike = () => {
-  liked.value = !liked.value;
-  likesCount.value += liked.value ? 1 : -1;
-  emit('like', props.moment.id);
+const onLike = () => { emit('like', props.moment.id); };
+const onUserClick = () => {
+  if (props.moment.user?.id) emit('user-click', props.moment.user.id);
 };
+
+const onShare = async () => {
+  const url = `${window.location.origin}/moment/${props.moment.id}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    shareToast.value = true;
+    setTimeout(() => { shareToast.value = false; }, 2200);
+  } catch {
+    // 降级：创建临时 input 复制
+    const inp = document.createElement('input');
+    inp.value = url;
+    document.body.appendChild(inp);
+    inp.select();
+    document.execCommand('copy');
+    document.body.removeChild(inp);
+    shareToast.value = true;
+    setTimeout(() => { shareToast.value = false; }, 2200);
+  }
+};
+
+const shareToast = ref(false);
+</script>
+
+<script lang="ts">
+export default { name: 'MomentCard' };
 </script>
 
 <template>
-  <div class="moment-card" @click="closeMenu">
+  <ConfirmDialog
+    v-model="deleteDialogVisible"
+    title="确认删除动态？"
+    description="删除后将无法恢复，确定要删除这条动态吗？"
+    ok-text="删除"
+    @confirm="emit('delete', moment.id)"
+  />
+
+  <div class="moment-card" v-bind="attrs" @click="closeMenu">
     <div class="moment-header">
-      <el-avatar :size="48" :src="moment.avatar" class="moment-avatar" />
+      <el-avatar :size="48" :src="moment.avatar" class="moment-avatar clickable-avatar" @click.stop="onUserClick" />
       <div class="user-meta">
         <span class="nickname">{{ moment.nickname }}</span>
         <span class="time">{{ moment.time }}</span>
@@ -64,17 +103,23 @@ const onLike = () => {
     <div class="moment-footer">
       <div class="action-btn" :class="{ liked }" @click="onLike">
         <div class="icon-wrapper yellow"><el-icon><Star /></el-icon></div>
-        <span>{{ likesCount > 0 ? likesCount : '点赞' }}</span>
+        <span>{{ likesCount > 0 ? likesCount : '赞' }}</span>
       </div>
-      <div class="action-btn" @click="onComment">
+      <div class="action-btn" :class="{ commented: moment.hasCommented }" @click="onComment">
         <div class="icon-wrapper green"><el-icon><ChatRound /></el-icon></div>
-        <span>评论</span>
+        <span>{{ moment.comments_count && moment.comments_count > 0 ? moment.comments_count : '评论' }}</span>
       </div>
-      <div class="action-btn">
+      <div class="action-btn share-btn" @click.stop="onShare">
         <div class="icon-wrapper purple"><el-icon><Share /></el-icon></div>
         <span>分享</span>
       </div>
     </div>
+    <!-- 分享成功提示 -->
+    <transition name="toast-fade">
+      <div v-if="shareToast" class="share-toast">
+        🔗 链接已复制，发给好友吧！
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -85,6 +130,7 @@ const onLike = () => {
   padding: 24px;
   margin-bottom: 24px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+  position: relative;
 }
 
 .moment-header {
@@ -96,6 +142,18 @@ const onLike = () => {
 
 .moment-avatar {
   border: 2px solid var(--primary-yellow);
+  flex-shrink: 0;
+  width: 48px !important;
+  height: 48px !important;
+}
+
+.clickable-avatar {
+  cursor: pointer;
+  transition: transform 0.16s ease;
+}
+
+.clickable-avatar:hover {
+  transform: scale(1.06);
 }
 
 .user-meta {
@@ -201,6 +259,12 @@ const onLike = () => {
   margin-top: 20px;
   padding-top: 20px;
   border-top: 2px dashed #f0f0f0;
+  min-height: 56px;
+}
+
+.action-btn span {
+  min-width: 24px;
+  display: inline-block;
 }
 
 .action-btn {
@@ -218,6 +282,10 @@ const onLike = () => {
 }
 
 .action-btn.liked span {
+  color: var(--primary-yellow);
+}
+
+.action-btn.commented span {
   color: var(--primary-yellow);
 }
 
@@ -241,6 +309,33 @@ const onLike = () => {
 
 .icon-wrapper.purple {
   background-color: var(--pastel-purple);
+}
+
+.share-toast {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #222;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 20px;
+  border-radius: 24px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 200;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+}
+
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: opacity 0.3s, transform 0.3s;
+}
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
 }
 
 @media (max-width: 768px) {

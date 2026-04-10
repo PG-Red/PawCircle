@@ -10,6 +10,7 @@ const momentRoutes = require('./routes/momentRoutes');
 const feedingRoutes = require('./routes/feedingRoutes');
 const listingRoutes = require('./routes/listingRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const friendRoutes = require('./routes/friendRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -19,8 +20,8 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN || ['http://localhost:5173', 'http://localhost:3000'],
   credentials: true
 }));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
 // 路由挂载
 app.use('/api/auth', authRoutes);
@@ -30,6 +31,7 @@ app.use('/api/moments', momentRoutes);
 app.use('/api/feeding-records', feedingRoutes);
 app.use('/api/listings', listingRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/social', friendRoutes);
 
 // 健康检查
 app.get('/api/health', (req, res) => {

@@ -33,6 +33,12 @@ defineProps<{ record: Record }>();
   background-color: var(--bg-color);
   border-radius: var(--border-radius-md);
   gap: 16px;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+}
+
+.record-item:active {
+  box-shadow: 0 0 0 3px #fcd371;
 }
 
 .record-icon {

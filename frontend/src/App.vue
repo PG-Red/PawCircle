@@ -1,20 +1,20 @@
 <template>
   <div class="layout-container">
-    <AppHeader />
+    <AppHeader v-if="$route.name !== 'auth' && $route.name !== 'moment-detail'" />
 
-    <main class="main-content">
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
-        </transition>
-      </router-view>
+    <main class="main-content" :class="{ 'no-header': $route.name === 'moment-detail' }">
+      <router-view />
     </main>
 
     <!-- Mobile Bottom Tab Bar -->
-    <nav class="mobile-tab-bar" v-if="$route.name !== 'auth'">
+    <nav class="mobile-tab-bar" v-if="$route.name !== 'auth' && $route.name !== 'moment-detail'">
       <router-link to="/" class="tab-item" active-class="active">
         <el-icon><House /></el-icon>
         <span>PawTrace</span>
+      </router-link>
+      <router-link to="/chat" class="tab-item" active-class="active">
+        <el-icon><Message /></el-icon>
+        <span>私聊</span>
       </router-link>
       <router-link to="/profiles" class="tab-item" active-class="active">
         <el-icon><Postcard /></el-icon>
@@ -37,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { House, Postcard, Calendar, ShoppingCart, ChatDotRound } from '@element-plus/icons-vue';
+import { House, Postcard, Calendar, ShoppingCart, ChatDotRound, Message } from '@element-plus/icons-vue';
 import AppHeader from './components/AppHeader.vue';
 </script>
 
@@ -54,11 +54,16 @@ import AppHeader from './components/AppHeader.vue';
   width: 100%;
 }
 
+.main-content.no-header {
+  max-width: 100%;
+  padding: 0;
+}
+
 .mobile-tab-bar {
   display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 960px) {
   .main-content {
     padding: 16px;
     padding-bottom: 80px;
