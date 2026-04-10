@@ -12,20 +12,28 @@ const getMoments = async (req, res) => {
     const connection = await pool.getConnection();
 
     try {
+      // 查询动态列表：过滤掉当前用户已软删除（隐藏）的动态
       const [moments] = await connection.query(
         `SELECT m.id, m.user_id, m.pet_id, m.content, m.image, m.likes_count, m.comments_count, m.created_at,
                 u.username, u.avatar, p.name as pet_name,
-                CASE WHEN l.id IS NOT NULL THEN true ELSE false END as is_liked
+                CASE WHEN l.id IS NOT NULL THEN true ELSE false END as is_liked,
+                CASE WHEN c.id IS NOT NULL THEN true ELSE false END as is_commented
          FROM moments m
          JOIN users u ON m.user_id = u.id
          LEFT JOIN pets p ON m.pet_id = p.id
          LEFT JOIN likes l ON m.id = l.moment_id AND l.user_id = ?
+         LEFT JOIN comments c ON m.id = c.moment_id AND c.user_id = ?
+         WHERE NOT (m.is_deleted_by_owner = 1 AND m.user_id = ?)
          ORDER BY m.created_at DESC
          LIMIT ? OFFSET ?`,
-        [userId, pageSize, offset]
+        [userId, userId, userId, pageSize, offset]
       );
 
-      const [countResult] = await connection.query('SELECT COUNT(*) as total FROM moments');
+      // 总数同样排除当前用户已隐藏的动态
+      const [countResult] = await connection.query(
+        'SELECT COUNT(*) as total FROM moments WHERE NOT (is_deleted_by_owner = 1 AND user_id = ?)',
+        [userId]
+      );
       const total = countResult[0].total;
 
       const formattedMoments = moments.map(m => ({
@@ -44,6 +52,7 @@ const getMoments = async (req, res) => {
         likes_count: m.likes_count,
         comments_count: m.comments_count,
         is_liked: m.is_liked,
+        is_commented: m.is_commented,
         created_at: m.created_at
       }));
 
@@ -120,7 +129,7 @@ const createMoment = async (req, res) => {
   }
 };
 
-// 删除动态
+// 隐藏动态（软删除：仅对发布者本人不可见，其他用户仍可看到）
 const deleteMoment = async (req, res) => {
   try {
     const { momentId } = req.params;
@@ -134,12 +143,16 @@ const deleteMoment = async (req, res) => {
       );
 
       if (moments.length === 0) {
-        return res.status(404).json(errorResponse(404, '动态不存在'));
+        return res.status(404).json(errorResponse(404, '动态不存在或无权操作'));
       }
 
-      await connection.query('DELETE FROM moments WHERE id = ?', [momentId]);
+      // 软删除：标记为对发布者隐藏，不从数据库物理删除
+      await connection.query(
+        'UPDATE moments SET is_deleted_by_owner = 1 WHERE id = ? AND user_id = ?',
+        [momentId, userId]
+      );
 
-      res.json(successResponse(null, '动态删除成功'));
+      res.json(successResponse(null, '动态已隐藏'));
     } finally {
       connection.release();
     }
@@ -238,8 +251,54 @@ const unlikeMoment = async (req, res) => {
   }
 };
 
+// 获取单条动态（公开，用于分享链接）
+const getMomentById = async (req, res) => {
+  try {
+    const { momentId } = req.params;
+    const userId = req.userId || null;
+    const connection = await pool.getConnection();
+    try {
+      const [moments] = await connection.query(
+        `SELECT m.id, m.user_id, m.pet_id, m.content, m.image, m.likes_count, m.comments_count, m.created_at,
+                u.username, u.avatar, p.name as pet_name,
+                CASE WHEN l.id IS NOT NULL THEN true ELSE false END as is_liked,
+                CASE WHEN c.id IS NOT NULL THEN true ELSE false END as is_commented
+         FROM moments m
+         JOIN users u ON m.user_id = u.id
+         LEFT JOIN pets p ON m.pet_id = p.id
+         LEFT JOIN likes l ON m.id = l.moment_id AND l.user_id = ?
+         LEFT JOIN comments c ON m.id = c.moment_id AND c.user_id = ?
+         WHERE m.id = ?`,
+        [userId, userId, momentId]
+      );
+      if (moments.length === 0) {
+        return res.status(404).json(errorResponse(404, '动态不存在'));
+      }
+      const m = moments[0];
+      res.json(successResponse({
+        id: m.id,
+        user: { id: m.user_id, username: m.username, avatar: m.avatar },
+        pet: m.pet_id ? { id: m.pet_id, name: m.pet_name } : null,
+        content: m.content,
+        image: m.image,
+        likes_count: m.likes_count,
+        comments_count: m.comments_count,
+        is_liked: m.is_liked,
+        is_commented: m.is_commented,
+        created_at: m.created_at
+      }));
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json(errorResponse(500, '服务器错误'));
+  }
+};
+
 module.exports = {
   getMoments,
+  getMomentById,
   createMoment,
   deleteMoment,
   likeMoment,

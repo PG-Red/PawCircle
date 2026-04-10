@@ -33,17 +33,50 @@ const router = createRouter({
       name: 'ai-assistant',
       component: () => import('../views/ai/index.vue'),
     },
+    {
+      path: '/chat',
+      name: 'chat',
+      component: () => import('../views/chat/index.vue'),
+    },
+    {
+      path: '/moment/:id',
+      name: 'moment-detail',
+      component: () => import('../views/home/MomentDetail.vue'),
+    },
+    {
+      path: '/user',
+      name: 'user',
+      component: () => import('../views/user/index.vue'),
+      redirect: '/user/info',
+      children: [
+        {
+          path: 'info',
+          name: 'user-info',
+          component: () => import('../views/user/UserInfo.vue'),
+        },
+        {
+          path: 'comments',
+          name: 'user-comments',
+          component: () => import('../views/user/UserComments.vue'),
+        },
+        {
+          path: 'password',
+          name: 'user-password',
+          component: () => import('../views/user/UserPassword.vue'),
+        },
+      ],
+    },
   ],
 });
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, from) => {
   const token = localStorage.getItem('token');
+  // 分享动态页面允许未登录访问
+  if (to.name === 'moment-detail') return;
   if (to.name !== 'auth' && !token) {
-    next({ name: 'auth' });
+    return { name: 'auth' };
   } else if (to.name === 'auth' && token) {
-    next({ name: 'home' });
-  } else {
-    next();
+    return { name: 'home' };
   }
 });
 

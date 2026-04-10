@@ -18,11 +18,25 @@
   --border-radius-pill: 9999px;
 }
 
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
 body {
   font-family: 'Nunito', sans-serif;
   background-color: var(--bg-color);
   color: var(--text-primary);
   margin: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+body::-webkit-scrollbar {
+  display: none;
 }
 
 *, *::before, *::after {

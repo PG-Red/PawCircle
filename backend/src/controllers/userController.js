@@ -1,6 +1,31 @@
 const pool = require('../config/database');
 const { successResponse, errorResponse, hashPassword, comparePassword } = require('../utils/helpers');
 
+const buildFriendStatus = async (connection, viewerId, targetUserId) => {
+  if (!viewerId) return 'none';
+  if (Number(viewerId) === Number(targetUserId)) return 'self';
+
+  const [friends] = await connection.query(
+    'SELECT id FROM friends WHERE user_id = ? AND friend_id = ? LIMIT 1',
+    [viewerId, targetUserId]
+  );
+  if (friends.length > 0) return 'friends';
+
+  const [sentPending] = await connection.query(
+    "SELECT id FROM friend_requests WHERE sender_id = ? AND receiver_id = ? AND status = 'pending' LIMIT 1",
+    [viewerId, targetUserId]
+  );
+  if (sentPending.length > 0) return 'pending_sent';
+
+  const [receivedPending] = await connection.query(
+    "SELECT id FROM friend_requests WHERE sender_id = ? AND receiver_id = ? AND status = 'pending' LIMIT 1",
+    [targetUserId, viewerId]
+  );
+  if (receivedPending.length > 0) return 'pending_received';
+
+  return 'none';
+};
+
 // 获取当前用户信息
 const getCurrentUser = async (req, res) => {
   try {
@@ -9,7 +34,7 @@ const getCurrentUser = async (req, res) => {
 
     try {
       const [users] = await connection.query(
-        'SELECT id, username, email, avatar, bio, created_at FROM users WHERE id = ?',
+        'SELECT id, username, email, avatar, bio, show_pets_public, show_pet_details_public, created_at FROM users WHERE id = ?',
         [userId]
       );
 
@@ -22,7 +47,7 @@ const getCurrentUser = async (req, res) => {
       connection.release();
     }
   } catch (error) {
-    console.error(error);
+    console.error('getCurrentUser error:', error.message, error.code, error.sqlMessage);
     res.status(500).json(errorResponse(500, '服务器错误'));
   }
 };
@@ -31,21 +56,118 @@ const getCurrentUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const userId = req.userId;
-    const { username, avatar, bio } = req.body;
+    const {
+      username,
+      avatar,
+      bio,
+      show_pets_public,
+      show_pet_details_public
+    } = req.body;
     const connection = await pool.getConnection();
 
     try {
+      const [existingRows] = await connection.query(
+        'SELECT username, avatar, bio, show_pets_public, show_pet_details_public FROM users WHERE id = ?',
+        [userId]
+      );
+
+      if (existingRows.length === 0) {
+        return res.status(404).json(errorResponse(404, '用户不存在'));
+      }
+
+      const existing = existingRows[0];
+      const nextUsername = username ?? existing.username;
+      const nextAvatar = avatar ?? existing.avatar;
+      const nextBio = bio ?? existing.bio;
+      const nextShowPetsPublic = show_pets_public === undefined
+        ? existing.show_pets_public
+        : (show_pets_public ? 1 : 0);
+      const nextShowPetDetailsPublic = show_pet_details_public === undefined
+        ? existing.show_pet_details_public
+        : (show_pet_details_public ? 1 : 0);
+
       await connection.query(
-        'UPDATE users SET username = ?, avatar = ?, bio = ? WHERE id = ?',
-        [username, avatar, bio, userId]
+        `UPDATE users
+         SET username = ?,
+             avatar = ?,
+             bio = ?,
+             show_pets_public = ?,
+             show_pet_details_public = ?
+         WHERE id = ?`,
+        [
+          nextUsername,
+          nextAvatar,
+          nextBio,
+          nextShowPetsPublic,
+          nextShowPetDetailsPublic,
+          userId
+        ]
       );
 
       const [users] = await connection.query(
-        'SELECT id, username, email, avatar, bio, created_at FROM users WHERE id = ?',
+        'SELECT id, username, email, avatar, bio, show_pets_public, show_pet_details_public, created_at FROM users WHERE id = ?',
         [userId]
       );
 
       res.json(successResponse(users[0], '用户信息更新成功'));
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('updateUser error:', error.message, error.code);
+    res.status(500).json(errorResponse(500, '服务器错误: ' + error.message));
+  }
+};
+
+// 获取指定用户公开资料
+const getPublicUserProfile = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const viewerId = req.userId || null;
+    const connection = await pool.getConnection();
+
+    try {
+      const [users] = await connection.query(
+        'SELECT id, username, avatar, bio, show_pets_public, show_pet_details_public, created_at FROM users WHERE id = ?',
+        [userId]
+      );
+
+      if (users.length === 0) {
+        return res.status(404).json(errorResponse(404, '用户不存在'));
+      }
+
+      const user = users[0];
+      let pets = [];
+
+      if (user.show_pets_public) {
+        if (user.show_pet_details_public) {
+          const [petRows] = await connection.query(
+            'SELECT id, name, breed, gender, birthday, image, description, created_at FROM pets WHERE user_id = ? ORDER BY created_at DESC',
+            [userId]
+          );
+          pets = petRows;
+        } else {
+          const [petRows] = await connection.query(
+            'SELECT id, name, image FROM pets WHERE user_id = ? ORDER BY created_at DESC',
+            [userId]
+          );
+          pets = petRows;
+        }
+      }
+
+      const friendStatus = await buildFriendStatus(connection, viewerId, user.id);
+
+      res.json(successResponse({
+        id: user.id,
+        username: user.username,
+        avatar: user.avatar,
+        bio: user.bio,
+        created_at: user.created_at,
+        show_pets_public: !!user.show_pets_public,
+        show_pet_details_public: !!user.show_pet_details_public,
+        friend_status: friendStatus,
+        pets,
+      }));
     } finally {
       connection.release();
     }
@@ -101,6 +223,6 @@ const changePassword = async (req, res) => {
 module.exports = {
   getCurrentUser,
   updateUser,
+  getPublicUserProfile,
   changePassword
 };
-

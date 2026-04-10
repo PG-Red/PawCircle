@@ -3,7 +3,7 @@ import { ref, nextTick } from 'vue';
 import { Promotion } from '@element-plus/icons-vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { aiApi } from '../../services/api';
+import { aiApi } from '@/api/index';
 
 const renderMd = (t: string) => t ? DOMPurify.sanitize(marked.parse(t) as string) : '';
 

@@ -130,7 +130,39 @@ const deleteComment = async (req, res) => {
         [momentId]
       );
 
-      res.json(successResponse(null, '评论删除成功'));
+      // 检查当前用户在该动态是否还有其他评论
+      const [remaining] = await connection.query(
+        'SELECT COUNT(*) as cnt FROM comments WHERE moment_id = ? AND user_id = ?',
+        [momentId, userId]
+      );
+      const hasUserCommented = remaining[0].cnt > 0;
+
+      res.json(successResponse({ has_user_commented: hasUserCommented }, '评论删除成功'));
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json(errorResponse(500, '服务器错误'));
+  }
+};
+
+// 获取当前用户的所有评论
+const getMyComments = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const connection = await pool.getConnection();
+    try {
+      const [comments] = await connection.query(
+        `SELECT c.id, c.content, c.created_at, c.moment_id,
+                m.content as moment_content
+         FROM comments c
+         JOIN moments m ON c.moment_id = m.id
+         WHERE c.user_id = ?
+         ORDER BY c.created_at DESC`,
+        [userId]
+      );
+      res.json(successResponse({ items: comments }));
     } finally {
       connection.release();
     }
@@ -143,6 +175,7 @@ const deleteComment = async (req, res) => {
 module.exports = {
   getComments,
   createComment,
-  deleteComment
+  deleteComment,
+  getMyComments
 };
 
