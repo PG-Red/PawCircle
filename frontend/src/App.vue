@@ -1,4 +1,3 @@
-// 好累
 <template>
   <div class="layout-container">
     <AppHeader v-if="$route.name !== 'auth' && $route.name !== 'moment-detail'" />
