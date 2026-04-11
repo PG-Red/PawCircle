@@ -93,8 +93,8 @@ const handleAvatarUpload = (e: Event) => {
           form.bio = res.data.bio || form.bio;
           localStorage.setItem('username', form.username);
           if (form.avatar) {
-            localStorage.setItem('avatar', form.avatar);
-            eventBus.emit('avatar-changed', form.avatar);
+          localStorage.setItem('avatar', form.avatar);
+          eventBus.emit('avatar-changed', form.avatar);
           } else {
             localStorage.removeItem('avatar');
             eventBus.emit('avatar-changed', '');

@@ -7,6 +7,9 @@ USE pawcircle;
 SET FOREIGN_KEY_CHECKS = 0;
 TRUNCATE TABLE ai_messages;
 TRUNCATE TABLE ai_conversations;
+TRUNCATE TABLE private_messages;
+TRUNCATE TABLE friends;
+TRUNCATE TABLE friend_requests;
 TRUNCATE TABLE feeding_records;
 TRUNCATE TABLE pet_listings;
 TRUNCATE TABLE comments;
@@ -155,6 +158,29 @@ INSERT INTO pet_listings (id, seller_id, title, category, description, price, im
 -- =============================================
 UPDATE moments SET likes_count = (SELECT COUNT(*) FROM likes WHERE moment_id = moments.id);
 UPDATE moments SET comments_count = (SELECT COUNT(*) FROM comments WHERE moment_id = moments.id);
+
+-- =============================================
+-- 8. 好友关系与私聊测试数据
+-- =============================================
+INSERT INTO friend_requests (sender_id, receiver_id, message, status, created_at, updated_at) VALUES
+(2, 1, '你好，想认识一下你家的 Max～', 'accepted', DATE_SUB(NOW(), INTERVAL 3 DAY), DATE_SUB(NOW(), INTERVAL 3 DAY)),
+(3, 1, '柯基家长申请加好友', 'accepted', DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(4, 1, '想交流猫咪喂养经验', 'pending', DATE_SUB(NOW(), INTERVAL 6 HOUR), DATE_SUB(NOW(), INTERVAL 6 HOUR)),
+(5, 1, '我是新来的，交个朋友吧', 'pending', DATE_SUB(NOW(), INTERVAL 2 HOUR), DATE_SUB(NOW(), INTERVAL 2 HOUR));
+
+INSERT INTO friends (user_id, friend_id, created_at) VALUES
+(1, 2, DATE_SUB(NOW(), INTERVAL 3 DAY)),
+(2, 1, DATE_SUB(NOW(), INTERVAL 3 DAY)),
+(1, 3, DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(3, 1, DATE_SUB(NOW(), INTERVAL 2 DAY));
+
+INSERT INTO private_messages (sender_id, receiver_id, content, is_read, created_at) VALUES
+(2, 1, '嗨，看到你家 Max 的动态啦，太可爱了！', 1, DATE_SUB(NOW(), INTERVAL 26 HOUR)),
+(1, 2, '谢谢夸奖～你家 Luna 也超漂亮', 1, DATE_SUB(NOW(), INTERVAL 25 HOUR)),
+(2, 1, '有空一起带毛孩子出来玩呀', 0, DATE_SUB(NOW(), INTERVAL 2 HOUR)),
+(3, 1, '周末有柯基聚会，你要不要来？', 1, DATE_SUB(NOW(), INTERVAL 9 HOUR)),
+(1, 3, '哈哈可以呀，地点发我', 1, DATE_SUB(NOW(), INTERVAL 8 HOUR)),
+(3, 1, '就在天河宠物公园，下午三点', 0, DATE_SUB(NOW(), INTERVAL 30 MINUTE));
 
 SELECT '测试数据导入完成！' AS result;
 SELECT '用户密码均为: password' AS tip;

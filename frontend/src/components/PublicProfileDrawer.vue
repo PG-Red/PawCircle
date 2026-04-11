@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive } from 'vue';
+import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { userApi, socialApi, type PublicUserProfile, type PublicPetDetail } from '@/api';
 
@@ -16,6 +17,8 @@ const visible = computed({
   get: () => props.modelValue,
   set: (v: boolean) => emit('update:modelValue', v),
 });
+
+const router = useRouter();
 
 const state = reactive({
   loading: false,
@@ -73,6 +76,13 @@ const friendActionText = computed(() => {
 });
 
 const canSendFriendRequest = computed(() => state.profile?.friend_status === 'none');
+const canOpenChat = computed(() => state.profile?.friend_status === 'friends');
+
+const goToChat = async () => {
+  if (!state.profile || !canOpenChat.value) return;
+  visible.value = false;
+  await router.push({ path: '/chat', query: { friendId: String(state.profile.id) } });
+};
 
 const readPet = (pet: unknown) => pet as PublicPetDetail;
 
@@ -96,15 +106,24 @@ defineExpose({ loadProfile });
             <h3>{{ profile.username }}</h3>
             <p>{{ profile.bio || '这个用户还没有填写简介' }}</p>
           </div>
-          <el-button
-            type="primary"
-            class="friend-btn"
-            :disabled="!canSendFriendRequest"
-            :loading="state.sending"
-            @click="sendFriendRequest"
-          >
-            {{ friendActionText }}
-          </el-button>
+          <div class="hero-actions">
+            <el-button
+              type="primary"
+              class="friend-btn"
+              :disabled="!canSendFriendRequest"
+              :loading="state.sending"
+              @click="sendFriendRequest"
+            >
+              {{ friendActionText }}
+            </el-button>
+            <el-button
+              v-if="canOpenChat"
+              class="chat-btn"
+              @click="goToChat"
+            >
+              发私聊
+            </el-button>
+          </div>
         </div>
 
         <div class="section-card">
@@ -155,6 +174,17 @@ defineExpose({ loadProfile });
   border-color: var(--primary-yellow);
   color: var(--dark-charcoal);
   font-weight: 800;
+}
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.chat-btn {
+  align-self: flex-start;
+  font-weight: 800;
+  color: var(--dark-charcoal);
 }
 .section-card {
   background: var(--card-bg);
