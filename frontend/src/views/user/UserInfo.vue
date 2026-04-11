@@ -3,10 +3,10 @@
     <div class="section-header compact-header">
       <div class="section-heading">
         <div class="section-icon-badge">
-          <el-icon class="section-icon"><User /></el-icon>
+      <el-icon class="section-icon"><User /></el-icon>
         </div>
         <div class="section-heading-copy">
-          <h2>基本信息</h2>
+      <h2>基本信息</h2>
           <p>调整资料展示方式，决定别人能看到多少关于你和毛孩子的内容。</p>
         </div>
       </div>
@@ -44,8 +44,8 @@
                 </div>
                 <p>开启后，其他人可以在你的公开主页中看到你拥有的宠物。</p>
               </div>
-              <el-switch
-                v-model="form.show_pets_public"
+            <el-switch
+              v-model="form.show_pets_public"
                 class="privacy-switch"
                 @click.stop
               />
@@ -66,12 +66,12 @@
                   开启后，会展示品种、生日、描述等更完整的信息；关闭时仅显示宠物名称和基础卡片。
                 </p>
               </div>
-              <el-switch
-                v-model="form.show_pet_details_public"
+            <el-switch
+              v-model="form.show_pet_details_public"
                 class="privacy-switch"
-                :disabled="!form.show_pets_public"
+              :disabled="!form.show_pets_public"
                 @click.stop
-              />
+            />
             </button>
           </div>
         </el-form-item>

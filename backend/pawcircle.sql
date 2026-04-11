@@ -111,11 +111,13 @@ CREATE TABLE IF NOT EXISTS private_messages (
   sender_id BIGINT NOT NULL,
   receiver_id BIGINT NOT NULL,
   content TEXT NOT NULL,
+  is_read TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_sender_receiver_time (sender_id, receiver_id, created_at),
-  INDEX idx_receiver_sender_time (receiver_id, sender_id, created_at)
+  INDEX idx_receiver_sender_time (receiver_id, sender_id, created_at),
+  INDEX idx_receiver_read (receiver_id, is_read)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 9. 喂养记录表

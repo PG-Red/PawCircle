@@ -80,6 +80,8 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'AppHeader' });
+
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessageBox, ElMessage } from 'element-plus';

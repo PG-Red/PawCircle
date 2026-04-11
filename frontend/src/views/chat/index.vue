@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { socialApi, type FriendItem, type FriendRequest, type PrivateMessage } from '@/api';
 
@@ -20,6 +21,7 @@ const hasLoadedFriendsOnce = ref(false);
 const unreadSnapshot = ref<Record<number, number>>({});
 
 const currentUserId = Number(localStorage.getItem('userId') || 0);
+const route = useRoute();
 
 const activeFriend = computed(() =>
   friends.value.find(f => f.id === activeFriendId.value) || null
@@ -55,6 +57,7 @@ const loadFriends = async () => {
   loadingFriends.value = true;
   try {
     const wasFirstLoad = !hasLoadedFriendsOnce.value;
+    const routeFriendId = Number(route.query.friendId || 0);
     const res = await socialApi.getFriends();
     const incoming = (res.data || []).map(item => ({
       ...item,
@@ -111,7 +114,9 @@ const loadFriends = async () => {
       friends.value.map(friend => [friend.id, Number(friend.unread_count || 0)])
     );
 
-    if (!activeFriendId.value && friends.value.length > 0) {
+    if (routeFriendId && friends.value.some(friend => friend.id === routeFriendId)) {
+      activeFriendId.value = routeFriendId;
+    } else if (!activeFriendId.value && friends.value.length > 0) {
       activeFriendId.value = friends.value[0].id;
     }
   } catch {
@@ -277,6 +282,16 @@ watch(activeFriendId, async (newFriendId) => {
   }
   loadMessages();
 });
+
+watch(
+  () => route.query.friendId,
+  (value) => {
+    const friendId = Number(value || 0);
+    if (friendId && friends.value.some(friend => friend.id === friendId)) {
+      activeFriendId.value = friendId;
+    }
+  }
+);
 
 onMounted(async () => {
   await Promise.all([loadFriends(), loadPendingRequests()]);
