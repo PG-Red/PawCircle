@@ -2,8 +2,8 @@
 import { ref, onMounted } from 'vue';
 import { Plus } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
-import PetCard from './PetCard.vue';
-import PetFormDialog from './PetFormDialog.vue';
+import PetCard from './components/PetCard.vue';
+import PetFormDialog from './components/PetFormDialog.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { petApi, type Pet } from '@/api/index';
 

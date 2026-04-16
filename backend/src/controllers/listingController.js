@@ -65,6 +65,7 @@ const getListings = async (req, res) => {
         price: l.price,
         image: l.image,
         location: l.location,
+        seller_intro: l.description,
         status: l.status,
         created_at: l.created_at
       }));
@@ -119,6 +120,7 @@ const getListingById = async (req, res) => {
         price: l.price,
         image: l.image,
         location: l.location,
+        seller_intro: l.description,
         status: l.status,
         created_at: l.created_at
       }));

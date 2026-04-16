@@ -2,8 +2,8 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Picture } from '@element-plus/icons-vue';
-import { momentApi } from '../../api/index';
-import { eventBus } from '../../utils/eventBus';
+import { momentApi } from '@/api/index';
+import { eventBus } from '@/utils/eventBus';
 
 const emit = defineEmits<{ (e: 'created'): void }>();
 const content = ref('');
@@ -238,3 +238,4 @@ export default { name: 'CreateMoment' };
   }
 }
 </style>
+

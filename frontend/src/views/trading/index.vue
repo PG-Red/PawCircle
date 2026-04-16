@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { defineAsyncComponent, ref, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { Search } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
-import ListingCard from './ListingCard.vue';
-import { listingApi, type PetListing } from '@/api/index';
+import { listingApi, socialApi, type PetListing } from '../../api/index';
 
+const ListingCard = defineAsyncComponent(() => import('./components/ListingCard.vue'));
+
+const router = useRouter();
 const activeCategory = ref('all');
 const searchQuery = ref('');
 const items = ref<PetListing[]>([]);
@@ -12,20 +15,17 @@ const loading = ref(false);
 const total = ref(0);
 const page = ref(1);
 
-const contactDialogVisible = ref(false);
+const sellerDialogVisible = ref(false);
 const contacting = ref(false);
-const contactSeller = ref({
-  username: '',
-  email: '',
-  listingTitle: '',
-});
+const selectedListing = ref<PetListing | null>(null);
+const currentUserId = Number(localStorage.getItem('userId') || 0);
 
 const loadListings = async () => {
   loading.value = true;
   try {
     const res = await listingApi.getListings(page.value, 12, activeCategory.value, searchQuery.value);
-    items.value = res.data.items;
-    total.value = res.data.total;
+    items.value = res.items;
+    total.value = res.total;
   } catch {
     ElMessage.error('加载交易列表失败');
   } finally {
@@ -41,44 +41,45 @@ watch([activeCategory, searchQuery], () => {
   searchTimer = setTimeout(() => { page.value = 1; loadListings(); }, 400);
 });
 
-const onContact = async (id: number) => {
+const onContact = async (listing: PetListing) => {
   contacting.value = true;
   try {
-    const res = await listingApi.getListing(id);
-    const detail = res.data;
-    contactSeller.value = {
-      username: detail.seller?.username || '卖家',
-      email: detail.seller?.email || '',
-      listingTitle: detail.title || '',
-    };
-    contactDialogVisible.value = true;
+    const res = await listingApi.getListing(listing.id);
+    selectedListing.value = res;
+    sellerDialogVisible.value = true;
   } catch {
-    ElMessage.error('获取卖家联系方式失败');
+    ElMessage.error('获取卖家信息失败');
   } finally {
     contacting.value = false;
   }
 };
 
-const copySellerEmail = async () => {
-  if (!contactSeller.value.email) {
-    ElMessage.warning('卖家暂未提供邮箱');
-    return;
-  }
-  try {
-    await navigator.clipboard.writeText(contactSeller.value.email);
-    ElMessage.success('邮箱已复制');
-  } catch {
-    ElMessage.error('复制失败，请手动复制');
-  }
-};
+const goToChatWithSeller = async () => {
+  const listing = selectedListing.value;
+  if (!listing) return;
 
-const sendEmailToSeller = () => {
-  if (!contactSeller.value.email) {
-    ElMessage.warning('卖家暂未提供邮箱');
+  if (Number(listing.seller.id) === currentUserId) {
+    ElMessage.warning('这是你自己发布的交易');
     return;
   }
-  const subject = encodeURIComponent(`咨询：${contactSeller.value.listingTitle}`);
-  window.open(`mailto:${contactSeller.value.email}?subject=${subject}`, '_self');
+
+  try {
+    const friendsRes = await socialApi.getFriends();
+    const isFriend = (friendsRes.data || []).some(friend => Number(friend.id) === Number(listing.seller.id));
+
+    if (!isFriend) {
+      ElMessage.warning('请先在对方主页添加好友，再进行私聊');
+      return;
+    }
+
+    sellerDialogVisible.value = false;
+    router.push({
+      path: '/chat',
+      query: { friendId: String(listing.seller.id) },
+    });
+  } catch {
+    ElMessage.error('打开私聊失败');
+  }
 };
 </script>
 
@@ -111,42 +112,44 @@ const sendEmailToSeller = () => {
       </el-col>
     </el-row>
 
-    <el-dialog v-model="contactDialogVisible" title="联系卖家" width="440px" align-center>
+    <el-dialog v-model="sellerDialogVisible" title="卖家信息" width="460px" align-center>
       <div v-loading="contacting" class="contact-dialog-body">
-        <div class="seller-row">
-          <span class="label">卖家</span>
-          <span class="value">{{ contactSeller.username }}</span>
+        <div v-if="selectedListing" class="seller-card">
+          <el-avatar :size="56" :src="selectedListing.seller.avatar" />
+          <div class="seller-main">
+            <div class="seller-id">卖家 ID</div>
+            <div class="seller-name">{{ selectedListing.seller.username }}</div>
+          </div>
         </div>
-        <div class="seller-row">
-          <span class="label">商品</span>
-          <span class="value">{{ contactSeller.listingTitle }}</span>
-        </div>
-        <div class="seller-row">
-          <span class="label">邮箱</span>
-          <span class="value">{{ contactSeller.email || '未提供' }}</span>
+        <div v-if="selectedListing" class="seller-row intro-row">
+          <span class="label">卖家介绍</span>
+          <span class="value intro-text">{{ selectedListing.seller_intro || selectedListing.description || '暂无介绍' }}</span>
         </div>
       </div>
       <template #footer>
         <div class="contact-footer">
-          <el-button class="copy-btn" @click="copySellerEmail">复制邮箱</el-button>
-          <el-button type="primary" class="email-btn" @click="sendEmailToSeller">发送邮件</el-button>
+          <el-button type="primary" class="email-btn" @click="goToChatWithSeller">去私聊联系</el-button>
         </div>
       </template>
     </el-dialog>
 
     <el-pagination
       v-if="total > 12"
-      v-model:current-page="page"
+      :current-page="page"
       :page-size="12"
       :total="total"
       layout="prev, pager, next"
       class="pagination"
-      @current-change="loadListings"
+      @current-change="(value) => { page = value; loadListings(); }"
     />
   </div>
 </template>
 
 <style scoped>
+:deep(.el-dialog__title) {
+  font-weight: 800;
+}
+
 .trading-container {
   padding-bottom: 40px;
 }
@@ -238,6 +241,32 @@ const sendEmailToSeller = () => {
   padding: 4px 0;
 }
 
+.seller-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--bg-color);
+}
+
+.seller-main {
+  min-width: 0;
+}
+
+.seller-id {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.seller-name {
+  color: var(--dark-charcoal);
+  font-size: 18px;
+  font-weight: 900;
+}
+
 .seller-row {
   display: flex;
   justify-content: space-between;
@@ -246,6 +275,11 @@ const sendEmailToSeller = () => {
   padding: 10px 12px;
   border-radius: 10px;
   background: var(--bg-color);
+}
+
+.intro-row {
+  align-items: flex-start;
+  flex-direction: column;
 }
 
 .seller-row .label {
@@ -258,24 +292,22 @@ const sendEmailToSeller = () => {
   color: var(--dark-charcoal);
   font-size: 14px;
   font-weight: 800;
-  text-align: right;
-  word-break: break-all;
+}
+
+.intro-text {
+  width: 100%;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .contact-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-}
-
-.copy-btn {
-  min-width: 96px;
-  border-radius: var(--border-radius-pill);
-  font-weight: 700;
 }
 
 .email-btn {
-  min-width: 112px;
+  min-width: 132px;
   border-radius: var(--border-radius-pill);
   background-color: var(--primary-yellow);
   border-color: var(--primary-yellow);

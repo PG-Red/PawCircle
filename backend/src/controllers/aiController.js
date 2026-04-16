@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const pool = require('../config/database');
 const { successResponse, errorResponse } = require('../utils/helpers');
 

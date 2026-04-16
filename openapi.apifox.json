@@ -1,0 +1,496 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PawCircle API",
+    "description": "根据 BACKEND_REQUIREMENTS.md 与当前后端路由整理，可直接导入 ApiFox。",
+    "version": "1.1.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080/api",
+      "description": "本地开发环境"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "健康检查",
+        "tags": ["系统"],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/auth/captcha": {
+      "get": {
+        "summary": "获取登录图形验证码",
+        "tags": ["认证"],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/auth/send-code": {
+      "post": {
+        "summary": "发送注册邮箱验证码",
+        "tags": ["认证"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/auth/send-login-code": {
+      "post": {
+        "summary": "发送登录邮箱验证码",
+        "tags": ["认证"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "用户注册",
+        "tags": ["认证"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "email", "code", "password"],
+                "properties": {
+                  "username": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "code": { "type": "string" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "用户登录",
+        "tags": ["认证"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "captchaId", "captchaCode"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" },
+                  "code": { "type": "string", "description": "邮箱登录验证码，可选" },
+                  "captchaId": { "type": "string" },
+                  "captchaCode": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/users/public/{userId}": {
+      "get": {
+        "summary": "获取公开用户资料",
+        "tags": ["用户"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/users/me": {
+      "get": {
+        "summary": "获取当前用户信息",
+        "tags": ["用户"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "put": {
+        "summary": "更新当前用户信息",
+        "tags": ["用户"],
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string" },
+                  "avatar": { "type": "string" },
+                  "bio": { "type": "string" },
+                  "show_pets_public": { "type": "boolean" },
+                  "show_pet_details_public": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/users/change-password": {
+      "post": {
+        "summary": "修改密码",
+        "tags": ["用户"],
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["old_password", "new_password"],
+                "properties": {
+                  "old_password": { "type": "string" },
+                  "new_password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/pets": {
+      "get": {
+        "summary": "获取当前用户宠物列表",
+        "tags": ["宠物"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "post": {
+        "summary": "添加宠物",
+        "tags": ["宠物"],
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "breed", "gender", "birthday"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "breed": { "type": "string" },
+                  "gender": { "type": "string", "enum": ["弟弟", "妹妹"] },
+                  "birthday": { "type": "string" },
+                  "image": { "type": "string" },
+                  "description": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/pets/{petId}": {
+      "get": {
+        "summary": "获取宠物详情",
+        "tags": ["宠物"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "petId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "put": {
+        "summary": "更新宠物信息",
+        "tags": ["宠物"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "petId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "delete": {
+        "summary": "删除宠物",
+        "tags": ["宠物"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "petId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/pets/{petId}/feeding-records": {
+      "get": {
+        "summary": "获取宠物喂养记录",
+        "tags": ["喂养"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "petId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "post": {
+        "summary": "添加喂养记录",
+        "tags": ["喂养"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "petId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/feeding-records/today": {
+      "get": {
+        "summary": "获取今日喂养统计",
+        "tags": ["喂养"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/moments": {
+      "get": {
+        "summary": "获取动态列表",
+        "tags": ["动态"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "post": {
+        "summary": "发布动态",
+        "tags": ["动态"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/moments/public/{momentId}": {
+      "get": {
+        "summary": "获取公开单条动态",
+        "tags": ["动态"],
+        "parameters": [{ "name": "momentId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/moments/{momentId}": {
+      "delete": {
+        "summary": "删除或隐藏动态",
+        "tags": ["动态"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "momentId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/moments/{momentId}/like": {
+      "post": {
+        "summary": "点赞动态",
+        "tags": ["动态"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "momentId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "delete": {
+        "summary": "取消点赞",
+        "tags": ["动态"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "momentId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/moments/my-comments": {
+      "get": {
+        "summary": "获取我的评论",
+        "tags": ["评论"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/moments/{momentId}/comments": {
+      "get": {
+        "summary": "获取动态评论",
+        "tags": ["评论"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "momentId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "post": {
+        "summary": "发布评论",
+        "tags": ["评论"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "momentId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/moments/{momentId}/comments/{commentId}": {
+      "delete": {
+        "summary": "删除评论",
+        "tags": ["评论"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "momentId", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "commentId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/listings": {
+      "get": {
+        "summary": "获取交易列表",
+        "tags": ["交易"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "post": {
+        "summary": "发布交易",
+        "tags": ["交易"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/listings/{listingId}": {
+      "get": {
+        "summary": "获取交易详情",
+        "tags": ["交易"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "listingId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "put": {
+        "summary": "更新交易",
+        "tags": ["交易"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "listingId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "delete": {
+        "summary": "删除交易",
+        "tags": ["交易"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "listingId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/listings/{listingId}/mark-sold": {
+      "patch": {
+        "summary": "标记交易为已售出",
+        "tags": ["交易"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "listingId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/ai/chat": {
+      "post": {
+        "summary": "发送消息到 AI 助手",
+        "tags": ["AI"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/ai/conversations/{conversationId}": {
+      "get": {
+        "summary": "获取 AI 对话历史",
+        "tags": ["AI"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "conversationId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/social/requests/pending": {
+      "get": {
+        "summary": "获取待处理好友申请",
+        "tags": ["社交"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/social/requests": {
+      "post": {
+        "summary": "发送好友申请",
+        "tags": ["社交"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/social/requests/{requestId}/accept": {
+      "post": {
+        "summary": "同意好友申请",
+        "tags": ["社交"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "requestId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/social/requests/{requestId}/reject": {
+      "post": {
+        "summary": "拒绝好友申请",
+        "tags": ["社交"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "requestId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/social/friends": {
+      "get": {
+        "summary": "获取好友列表",
+        "tags": ["社交"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/social/conversations": {
+      "get": {
+        "summary": "获取私聊会话列表",
+        "tags": ["社交"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/social/messages/{friendId}": {
+      "get": {
+        "summary": "获取与好友的消息记录",
+        "tags": ["社交"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "friendId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "post": {
+        "summary": "发送私聊消息",
+        "tags": ["社交"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "friendId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/social/messages/{friendId}/read": {
+      "post": {
+        "summary": "标记与好友消息为已读",
+        "tags": ["社交"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "friendId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    }
+  }
+}

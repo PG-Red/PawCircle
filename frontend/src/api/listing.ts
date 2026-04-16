@@ -11,6 +11,7 @@ export interface PetListing {
   price: number;
   image: string;
   location: string;
+  seller_intro?: string;
   status: 'active' | 'sold' | 'closed';
   created_at: string;
 }

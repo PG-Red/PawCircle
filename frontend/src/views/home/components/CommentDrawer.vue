@@ -2,7 +2,7 @@
 import { ref, watch, nextTick } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Promotion, Delete } from '@element-plus/icons-vue';
-import { commentApi, type Comment } from '../../api/index';
+import { commentApi, type Comment } from '@/api/index';
 
 const props = defineProps<{ modelValue: boolean; momentId: number | null; highlightCommentId?: number | null }>();
 const emit = defineEmits<{
@@ -218,57 +218,43 @@ export default { name: 'CommentDrawer' };
   gap: 10px;
   padding: 12px 0 0;
   border-top: 2px dashed #f0f0f0;
-  margin-top: 12px;
 }
 
 .c-input {
   flex: 1;
-  padding: 10px 16px;
-  border: 1px solid #e0e0e0;
-  border-radius: var(--border-radius-pill);
-  font-family: inherit;
-  font-size: 14px;
-  color: var(--dark-charcoal);
+  height: 48px;
+  border: none;
   background: var(--bg-color);
+  border-radius: var(--border-radius-pill);
+  padding: 0 18px;
+  font-size: 15px;
+  font-family: inherit;
   outline: none;
-  transition: border-color 0.2s;
-}
-
-.c-input:focus {
-  border-color: var(--primary-yellow);
 }
 
 .c-send {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: var(--primary-yellow);
   border: none;
+  background: var(--primary-yellow);
   color: var(--dark-charcoal);
   font-size: 18px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
+}
+
+.c-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .comment-item--highlight {
   background: rgba(252, 211, 113, 0.18);
-  border-radius: 10px;
-  padding: 8px;
-  margin: -8px;
-  animation: commentPulse 2.5s ease-out forwards;
-}
-
-@keyframes commentPulse {
-  0%   { background: rgba(252, 211, 113, 0.35); box-shadow: 0 0 0 3px rgba(252,211,113,0.5); }
-  60%  { background: rgba(252, 211, 113, 0.18); box-shadow: 0 0 0 6px rgba(252,211,113,0.1); }
-  100% { background: transparent; box-shadow: none; }
-}
-
-.c-send:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+  border-radius: 12px;
+  padding: 10px;
 }
 </style>
+

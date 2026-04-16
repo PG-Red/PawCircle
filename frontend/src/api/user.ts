@@ -1,4 +1,5 @@
-import request from '@/utils/request';
+import request from '../utils/request';
+import type { ApiResponse } from './types';
 
 export interface UserProfile {
   id: number;
@@ -13,19 +14,19 @@ export interface UserProfile {
 
 // 获取当前用户信息
 export const getProfileService = () =>
-  request<UserProfile>('GET', '/users/me');
+  request<ApiResponse<UserProfile>>('GET', '/users/me');
 
 // 更新用户信息
 export const updateProfileService = (
   data: Partial<Omit<UserProfile, 'id' | 'email' | 'created_at'>>
-) => request<UserProfile>('PUT', '/users/me', data);
+) => request<ApiResponse<UserProfile>>('PUT', '/users/me', data);
 
 // 修改密码
 export const changePasswordService = (
   oldPassword: string,
   newPassword: string
 ) =>
-  request<null>('POST', '/users/change-password', {
+  request<ApiResponse<null>>('POST', '/users/change-password', {
     old_password: oldPassword,
     new_password: newPassword,
   });

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted, watch } from 'vue';
 import { ElMessage } from 'element-plus';
-import RecordItem from './RecordItem.vue';
+import RecordItem from './components/RecordItem.vue';
 import { feedingApi, petApi, type Pet, type FeedingRecord } from '@/api/index';
 
 const currentDate = ref(new Date());

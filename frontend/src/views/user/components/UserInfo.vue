@@ -258,85 +258,76 @@ const saveProfile = async () => {
 }
 
 .bio-count.near-limit {
-  color: #FA8C16;
+  color: #fa8c16;
 }
 
 .privacy-panel {
-  width: 100%;
-  border-radius: 22px;
-  padding: 18px;
-  background:
-    linear-gradient(135deg, rgba(34, 26, 16, 0.96) 0%, rgba(64, 47, 24, 0.96) 100%);
-  color: #fff7e6;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 10px 28px rgba(38, 26, 12, 0.18);
+  display: grid;
+  gap: 14px;
 }
 
 .privacy-intro {
-  margin-bottom: 14px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.12) 0%, rgba(255, 244, 217, 0.72) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.18);
 }
 
 .privacy-kicker {
   display: inline-block;
   font-size: 11px;
+  letter-spacing: 0.12em;
   font-weight: 800;
-  letter-spacing: 0.16em;
-  color: rgba(255, 222, 143, 0.72);
-  margin-bottom: 10px;
+  color: #b7791f;
+  margin-bottom: 8px;
 }
 
 .privacy-intro h3 {
-  margin: 0 0 8px;
-  font-size: 20px;
+  margin: 0 0 6px;
+  font-size: 18px;
   font-weight: 900;
-  color: #fff8ea;
+  color: var(--dark-charcoal);
 }
 
 .privacy-intro p {
   margin: 0;
   font-size: 13px;
-  line-height: 1.75;
-  color: rgba(255, 245, 220, 0.78);
+  line-height: 1.7;
+  color: rgba(58, 45, 26, 0.72);
 }
 
 .privacy-option {
   width: 100%;
-  border: 1px solid rgba(255, 214, 120, 0.12);
+  border: 1px solid rgba(224, 210, 180, 0.9);
   border-radius: 18px;
-  background: rgba(255,255,255,0.03);
-  padding: 16px 18px;
+  background: rgba(255,255,255,0.82);
+  padding: 18px 20px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  gap: 16px;
   text-align: left;
-}
-
-.privacy-option + .privacy-option {
-  margin-top: 12px;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
 .privacy-option:hover {
   transform: translateY(-1px);
-  border-color: rgba(255, 214, 120, 0.38);
-  background: rgba(255,255,255,0.06);
+  border-color: rgba(251, 191, 36, 0.45);
+  box-shadow: 0 12px 24px rgba(242, 180, 27, 0.08);
 }
 
 .privacy-option.active {
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.18), rgba(251, 191, 36, 0.08));
-  border-color: rgba(255, 214, 120, 0.48);
-  box-shadow: 0 10px 24px rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.65);
+  box-shadow: 0 14px 28px rgba(242, 180, 27, 0.12);
 }
 
 .privacy-option.disabled {
-  opacity: 0.56;
+  opacity: 0.58;
   cursor: not-allowed;
-  box-shadow: none;
 }
 
 .privacy-copy {
-  min-width: 0;
+  flex: 1;
 }
 
 .privacy-title-row {
@@ -347,14 +338,15 @@ const saveProfile = async () => {
 }
 
 .privacy-badge {
-  width: 28px;
+  min-width: 28px;
   height: 28px;
-  border-radius: 10px;
+  padding: 0 8px;
+  border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 214, 120, 0.14);
-  color: #ffd36b;
+  background: rgba(251, 191, 36, 0.18);
+  color: #8a5a11;
   font-size: 12px;
   font-weight: 900;
 }
@@ -362,105 +354,82 @@ const saveProfile = async () => {
 .privacy-copy h4 {
   margin: 0;
   font-size: 16px;
-  font-weight: 800;
-  color: #fff8ea;
+  font-weight: 900;
+  color: var(--dark-charcoal);
 }
 
 .privacy-copy p {
   margin: 0;
   font-size: 13px;
   line-height: 1.7;
-  color: rgba(255, 245, 220, 0.75);
+  color: var(--text-secondary);
 }
 
 .privacy-switch {
-  flex-shrink: 0;
+  align-self: center;
 }
 
-:deep(.privacy-switch .el-switch__core) {
-  min-width: 50px;
-  height: 28px;
+.save-btn {
+  margin-top: 8px;
+  min-width: 136px;
+  height: 46px;
+  border: none;
   border-radius: 999px;
-  background: rgba(255,255,255,0.18);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #3b2f17;
+  font-weight: 900;
+  box-shadow: 0 14px 28px rgba(245, 158, 11, 0.22);
 }
 
-:deep(.privacy-switch.is-checked .el-switch__core) {
-  background: linear-gradient(135deg, #f8d34f 0%, #f2b41b 100%) !important;
-  border-color: transparent;
+.save-btn:hover {
+  background: linear-gradient(135deg, #f6b10f 0%, #e18b07 100%);
+  color: #2f2412;
+}
+
+.save-btn-text {
+  letter-spacing: 0.02em;
+}
+
+:deep(.el-form-item__label) {
+  font-weight: 800;
+  color: var(--dark-charcoal);
 }
 
 :deep(.el-input__wrapper) {
   border-radius: 14px;
   background: rgba(255,255,255,0.82);
-  box-shadow: 0 0 0 1px rgba(224, 210, 180, 0.9) inset !important;
+  box-shadow: 0 0 0 1px rgba(224, 210, 180, 0.9) inset;
+  transition: box-shadow 0.2s, background-color 0.2s;
 }
 
 :deep(.el-input__wrapper.is-focus) {
-  background-color: #fffdfa !important;
-  box-shadow: 0 0 0 1px #f2b41b inset, 0 0 0 4px rgba(242, 180, 27, 0.12) !important;
+  background-color: #fffdfa;
+  box-shadow: 0 0 0 2px rgba(242, 180, 27, 0.4) inset !important;
 }
 
-.save-btn {
-  width: 100%;
-  margin-top: 12px;
-  height: 48px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #f8d34f 0%, #f2b41b 100%);
-  border: none;
-  color: #332710;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  box-shadow: 0 12px 24px rgba(242, 180, 27, 0.22);
-}
-
-:deep(.save-btn > span) {
-  width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-:deep(.save-btn .el-icon) {
-  position: absolute;
-  left: calc(50% - 44px);
-  margin: 0;
-}
-
-.save-btn-text {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 64px;
-}
-
-.save-btn:hover {
-  background: linear-gradient(135deg, #f5c934 0%, #e8a80e 100%);
-  color: #332710;
+:deep(.el-switch.is-checked .el-switch__core) {
+  background-color: #f2b41b;
+  border-color: #f2b41b;
 }
 
 @media (max-width: 768px) {
   .section-card {
-    padding: 20px 16px;
+    padding: 20px 18px;
     border-radius: 20px;
-  }
-
-  .privacy-panel {
-    padding: 14px;
-    border-radius: 18px;
-  }
-
-  .privacy-option {
-    padding: 14px;
-    gap: 12px;
-  }
-
-  .section-heading {
-    align-items: flex-start;
   }
 
   .section-heading-copy {
     gap: 6px;
   }
+
+  .section-heading-copy p {
+    width: 100%;
+  }
+
+  .privacy-option {
+    padding: 16px;
+    align-items: flex-start;
+  }
 }
 </style>
+

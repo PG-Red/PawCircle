@@ -102,3 +102,4 @@ defineProps<{ record: Record }>();
   }
 }
 </style>
+

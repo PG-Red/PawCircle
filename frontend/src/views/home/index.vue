@@ -3,12 +3,12 @@ import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import { VideoPlay } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
-import MomentCard from './MomentCard.vue';
-import CommentDrawer from './CommentDrawer.vue';
-import CreateMoment from './CreateMoment.vue';
+import MomentCard from './components/MomentCard.vue';
+import CommentDrawer from './components/CommentDrawer.vue';
+import CreateMoment from './components/CreateMoment.vue';
 import PublicProfileDrawer from '@/components/PublicProfileDrawer.vue';
-import { momentApi, likeApi, type Moment as ApiMoment } from '../../api/index';
-import { eventBus } from '../../utils/eventBus';
+import { momentApi, likeApi, type Moment as ApiMoment } from '@/api/index';
+import { eventBus } from '@/utils/eventBus';
 
 const route = useRoute();
 const highlightedMomentId = ref<number | null>(null);

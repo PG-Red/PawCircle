@@ -52,17 +52,17 @@ const router = createRouter({
         {
           path: 'info',
           name: 'user-info',
-          component: () => import('../views/user/UserInfo.vue'),
+          component: () => import('../views/user/components/UserInfo.vue'),
         },
         {
           path: 'comments',
           name: 'user-comments',
-          component: () => import('../views/user/UserComments.vue'),
+          component: () => import('../views/user/components/UserComments.vue'),
         },
         {
           path: 'password',
           name: 'user-password',
-          component: () => import('../views/user/UserPassword.vue'),
+          component: () => import('../views/user/components/UserPassword.vue'),
         },
       ],
     },

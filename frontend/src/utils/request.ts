@@ -7,6 +7,28 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 const getToken = () => localStorage.getItem('token');
 
+export class RequestError extends Error {
+  status: number;
+  data: unknown;
+
+  constructor(status: number, message: string, data?: unknown) {
+    super(message);
+    this.name = 'RequestError';
+    this.status = status;
+    this.data = data;
+  }
+}
+
+async function parseResponseBody(response: Response) {
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return response.json();
+  }
+
+  const text = await response.text();
+  return text || null;
+}
+
 async function request<T = any>(
   method: string,
   endpoint: string,
@@ -32,15 +54,25 @@ async function request<T = any>(
     ...options,
   });
 
+  const body = await parseResponseBody(response);
+
   if (!response.ok) {
+    const message =
+      typeof body === 'object' && body !== null && 'message' in body && typeof body.message === 'string'
+        ? body.message
+        : `HTTP ${response.status}`;
+
     if (response.status === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/auth';
+      if (!endpoint.startsWith('/auth/')) {
+        window.location.href = '/auth';
+      }
     }
-    throw new Error(`HTTP ${response.status}`);
+
+    throw new RequestError(response.status, message, body);
   }
 
-  return response.json();
+  return body as T;
 }
 
 export default request;

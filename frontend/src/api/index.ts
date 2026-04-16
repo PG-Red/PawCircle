@@ -33,7 +33,7 @@ export * from './user';
 export * from './social';
 
 // ---- 兼容原 services/api.ts 的对象风格导出 ----
-import { sendCodeService, registerService, loginService } from './auth';
+import { sendCodeService, getCaptchaService, sendLoginCodeService, registerService, loginService } from './auth';
 import { getPetsService, getPetService, addPetService, updatePetService, deletePetService } from './pet';
 import { getMomentsService, createMomentService, deleteMomentService, getMomentByIdService } from './moment';
 import { likeMomentService, unlikeMomentService } from './like';
@@ -57,9 +57,11 @@ import {
 
 // 认证模块：发送验证码、注册、登录
 export const authApi = {
-  sendCode: sendCodeService,     // POST /auth/send-code
-  register: registerService,     // POST /auth/register
-  login: loginService,           // POST /auth/login
+  sendCode: sendCodeService,          // POST /auth/send-code
+  getCaptcha: getCaptchaService,      // GET  /auth/captcha
+  sendLoginCode: sendLoginCodeService, // POST /auth/send-login-code
+  register: registerService,          // POST /auth/register
+  login: loginService,                // POST /auth/login
 };
 
 // 宠物模块：宠物档案的增删改查

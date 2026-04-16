@@ -8,7 +8,6 @@ const emit = defineEmits<{
   (e: 'delete', pet: Pet): void;
 }>();
 
-// 根据生日计算年龄
 const calcAge = (birthday: string) => {
   if (!birthday) return '未知';
   const years = new Date().getFullYear() - new Date(birthday).getFullYear();
@@ -169,3 +168,4 @@ const formatBirthday = (birthday: string) => {
   color: #fff;
 }
 </style>
+

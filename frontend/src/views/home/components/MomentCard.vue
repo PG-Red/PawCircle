@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, useAttrs } from 'vue';
 import { ChatRound, Star, Share, MoreFilled, Delete, Warning } from '@element-plus/icons-vue';
-import ConfirmDialog from '../../components/ConfirmDialog.vue';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 
 interface Moment {
   id: number;
@@ -114,7 +114,6 @@ export default { name: 'MomentCard' };
         <span>分享</span>
       </div>
     </div>
-    <!-- 分享成功提示 -->
     <transition name="toast-fade">
       <div v-if="shareToast" class="share-toast">
         🔗 链接已复制，发给好友吧！
@@ -318,40 +317,22 @@ export default { name: 'MomentCard' };
   transform: translateX(-50%);
   background: #222;
   color: #fff;
+  padding: 10px 14px;
+  border-radius: 999px;
   font-size: 13px;
   font-weight: 700;
-  padding: 10px 20px;
-  border-radius: 24px;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 200;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
 }
 
 .toast-fade-enter-active,
 .toast-fade-leave-active {
-  transition: opacity 0.3s, transform 0.3s;
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
+
 .toast-fade-enter-from,
 .toast-fade-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(8px);
-}
-
-@media (max-width: 768px) {
-  .moment-card {
-    padding: 16px;
-  }
-
-  .moment-footer {
-    flex-wrap: wrap;
-    gap: 16px;
-  }
-
-  .icon-wrapper {
-    width: 32px;
-    height: 32px;
-    font-size: 16px;
-  }
+  transform: translateX(-50%) translateY(6px);
 }
 </style>
+

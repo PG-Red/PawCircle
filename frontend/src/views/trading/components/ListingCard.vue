@@ -1,20 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Location, Clock, ArrowDown, ArrowUp } from '@element-plus/icons-vue';
+import type { PetListing } from '../../../api/listing';
 
-interface Listing {
-  id: number;
-  category: string;
-  title: string;
-  description: string;
-  price: number;
-  location: string;
-  date: string;
-  image: string;
-}
-
-const props = defineProps<{ listing: Listing }>();
-const emit = defineEmits<{ (e: 'contact', id: number): void }>();
+const props = defineProps<{ listing: PetListing }>();
+const emit = defineEmits<{ (e: 'contact', listing: PetListing): void }>();
 const expanded = ref(false);
 </script>
 
@@ -40,9 +30,9 @@ const expanded = ref(false);
       </div>
       <div class="meta">
         <div class="meta-item"><el-icon><Location /></el-icon><span>{{ listing.location }}</span></div>
-        <div class="meta-item"><el-icon><Clock /></el-icon><span>{{ listing.date }}</span></div>
+        <div class="meta-item"><el-icon><Clock /></el-icon><span>{{ new Date(listing.created_at).toLocaleDateString('zh-CN') }}</span></div>
       </div>
-      <button class="contact-btn" @click="emit('contact', listing.id)">联系卖家</button>
+      <button class="contact-btn" @click="emit('contact', listing)">联系卖家</button>
     </div>
   </div>
 </template>
@@ -197,3 +187,4 @@ const expanded = ref(false);
   opacity: 0;
 }
 </style>
+
