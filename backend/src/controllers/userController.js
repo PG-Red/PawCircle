@@ -34,7 +34,7 @@ const getCurrentUser = async (req, res) => {
 
     try {
       const [users] = await connection.query(
-        'SELECT id, username, email, avatar, bio, show_pets_public, show_pet_details_public, created_at FROM users WHERE id = ?',
+        'SELECT id, username, email, avatar, bio, show_pets_public, show_pet_details_public, allow_friend_request, chat_permission, created_at FROM users WHERE id = ?',
         [userId]
       );
 
@@ -61,13 +61,15 @@ const updateUser = async (req, res) => {
       avatar,
       bio,
       show_pets_public,
-      show_pet_details_public
+      show_pet_details_public,
+      allow_friend_request,
+      chat_permission
     } = req.body;
     const connection = await pool.getConnection();
 
     try {
       const [existingRows] = await connection.query(
-        'SELECT username, avatar, bio, show_pets_public, show_pet_details_public FROM users WHERE id = ?',
+        'SELECT username, avatar, bio, show_pets_public, show_pet_details_public, allow_friend_request, chat_permission FROM users WHERE id = ?',
         [userId]
       );
 
@@ -85,6 +87,13 @@ const updateUser = async (req, res) => {
       const nextShowPetDetailsPublic = show_pet_details_public === undefined
         ? existing.show_pet_details_public
         : (show_pet_details_public ? 1 : 0);
+      const nextAllowFriendRequest = allow_friend_request === undefined
+        ? existing.allow_friend_request
+        : (allow_friend_request ? 1 : 0);
+      const validChatPermissions = ['all', 'friends_only', 'none'];
+      const nextChatPermission = (chat_permission && validChatPermissions.includes(chat_permission))
+        ? chat_permission
+        : existing.chat_permission;
 
       await connection.query(
         `UPDATE users
@@ -92,7 +101,9 @@ const updateUser = async (req, res) => {
              avatar = ?,
              bio = ?,
              show_pets_public = ?,
-             show_pet_details_public = ?
+             show_pet_details_public = ?,
+             allow_friend_request = ?,
+             chat_permission = ?
          WHERE id = ?`,
         [
           nextUsername,
@@ -100,12 +111,14 @@ const updateUser = async (req, res) => {
           nextBio,
           nextShowPetsPublic,
           nextShowPetDetailsPublic,
+          nextAllowFriendRequest,
+          nextChatPermission,
           userId
         ]
       );
 
       const [users] = await connection.query(
-        'SELECT id, username, email, avatar, bio, show_pets_public, show_pet_details_public, created_at FROM users WHERE id = ?',
+        'SELECT id, username, email, avatar, bio, show_pets_public, show_pet_details_public, allow_friend_request, chat_permission, created_at FROM users WHERE id = ?',
         [userId]
       );
 

@@ -2,7 +2,9 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { socialApi, type FriendItem, type FriendRequest, type PrivateMessage } from '@/api';
+import { socialApi, userApi, type FriendItem, type FriendRequest, type PrivateMessage } from '@/api';
+import PublicProfileDrawer from '@/components/PublicProfileDrawer.vue';
+import CollapsePanel from './components/CollapsePanel.vue';
 
 const friends = ref<FriendItem[]>([]);
 const pendingRequests = ref<FriendRequest[]>([]);
@@ -20,8 +22,47 @@ const pollIntervalMs = 8000;
 const hasLoadedFriendsOnce = ref(false);
 const unreadSnapshot = ref<Record<number, number>>({});
 
+const publicProfileVisible = ref(false);
+const selectedUserId = ref<number | null>(null);
+
 const currentUserId = Number(localStorage.getItem('userId') || 0);
 const route = useRoute();
+
+const isRequestsExpanded = ref(true);
+const isFriendsExpanded = ref(false);
+
+watch(pendingRequests, (newVal) => {
+  if (newVal.length > 0) isRequestsExpanded.value = true;
+});
+
+const conversationList = computed(() => {
+  // 会话列表：有聊天记录的，或是临时会话的，或是当前选中的
+  return friends.value.filter(f => f.last_message || f.is_friend === 0 || f.id === activeFriendId.value);
+});
+
+const friendList = computed(() => {
+  // 好友列表：仅包含真正的的好友
+  return friends.value.filter(f => f.is_friend === 1);
+});
+
+const showUserProfile = (userId: number) => {
+  selectedUserId.value = userId;
+  publicProfileVisible.value = true;
+};
+
+const TEMP_CHATS_KEY = 'pawcircle_temp_chats_' + currentUserId;
+
+const getTempChats = (): FriendItem[] => {
+  try {
+    return JSON.parse(localStorage.getItem(TEMP_CHATS_KEY) || '[]');
+  } catch {
+    return [];
+  }
+};
+
+const saveTempChats = (chats: FriendItem[]) => {
+  localStorage.setItem(TEMP_CHATS_KEY, JSON.stringify(chats));
+};
 
 const activeFriend = computed(() =>
   friends.value.find(f => f.id === activeFriendId.value) || null
@@ -64,14 +105,23 @@ const loadFriends = async () => {
       unread_count: Number(item.unread_count || 0),
     }));
 
+    const incomingIds = new Set(incoming.map(f => f.id));
+    let tempChats = getTempChats();
+    const originalTempCount = tempChats.length;
+    // 如果临时会话已经出现在接口返回的列表里（比如双方发了消息或成为好友），则从本地临时缓存中移除
+    tempChats = tempChats.filter(f => !incomingIds.has(f.id));
+    if (tempChats.length !== originalTempCount) {
+      saveTempChats(tempChats);
+    }
+
     if (wasFirstLoad) {
-      friends.value = incoming;
+      friends.value = [...tempChats, ...incoming];
       hasLoadedFriendsOnce.value = true;
     } else {
       const oldMap = new Map(friends.value.map(f => [f.id, f]));
       const currentActiveId = activeFriendId.value;
 
-      friends.value = incoming.map(item => {
+      const merged = incoming.map(item => {
         const old = oldMap.get(item.id);
         if (!old) return item;
 
@@ -94,6 +144,34 @@ const loadFriends = async () => {
 
         return item;
       });
+
+      // 保持本地临时会话与合并后的列表组合
+      const mergedTempChats = tempChats.map(item => oldMap.get(item.id) || item);
+      friends.value = [...mergedTempChats, ...merged];
+    }
+
+    if (routeFriendId && !friends.value.some(friend => friend.id === routeFriendId)) {
+      try {
+        const profileRes = await userApi.getPublicProfile(routeFriendId);
+        if (profileRes.data) {
+          const newTempChat = {
+            id: profileRes.data.id,
+            username: profileRes.data.username,
+            avatar: profileRes.data.avatar,
+            bio: profileRes.data.bio || '',
+            friend_since: new Date().toISOString(),
+            unread_count: 0,
+            is_friend: 0
+          };
+          friends.value.unshift(newTempChat);
+          
+          tempChats.unshift(newTempChat);
+          if (tempChats.length > 20) tempChats.pop();
+          saveTempChats(tempChats);
+        }
+      } catch (err) {
+        // 如果获取失败，则不处理
+      }
     }
 
     if (!wasFirstLoad) {
@@ -192,8 +270,33 @@ const loadMessages = async () => {
   }
 };
 
+const isTempChat = computed(() => {
+  if (!activeFriend.value) return false;
+  return activeFriend.value.is_friend === 0;
+});
+
+const canSendMessage = computed(() => {
+  if (!isTempChat.value) return true;
+  // 临时会话：如果有发送记录且对方没回，就不让发
+  let sentCount = 0;
+  let repliedCount = 0;
+  for (const msg of messages.value) {
+    if (msg.sender_id === currentUserId) sentCount++;
+    else repliedCount++;
+  }
+  return sentCount === 0 || repliedCount > 0;
+});
+
 const sendMessage = async () => {
   if (!activeFriendId.value || !inputText.value.trim() || sending.value) return;
+  if (!canSendMessage.value) {
+    ElMessage.warning('临时会话：您已发送过消息，请等待对方回复后再继续。');
+    return;
+  }
+  if (inputText.value.length > 150) {
+    ElMessage.warning('临时会话：消息不能超过150字。');
+    return;
+  }
   const friendId = activeFriendId.value;
   const content = inputText.value.trim();
   sending.value = true;
@@ -285,10 +388,38 @@ watch(activeFriendId, async (newFriendId) => {
 
 watch(
   () => route.query.friendId,
-  (value) => {
+  async (value) => {
     const friendId = Number(value || 0);
-    if (friendId && friends.value.some(friend => friend.id === friendId)) {
+    if (!friendId) return;
+
+    if (friends.value.some(friend => friend.id === friendId)) {
       activeFriendId.value = friendId;
+    } else {
+      try {
+        const profileRes = await userApi.getPublicProfile(friendId);
+        if (profileRes.data) {
+          const newTempChat = {
+            id: profileRes.data.id,
+            username: profileRes.data.username,
+            avatar: profileRes.data.avatar,
+            bio: profileRes.data.bio || '',
+            friend_since: new Date().toISOString(),
+            unread_count: 0,
+            is_friend: 0
+          };
+          friends.value.unshift(newTempChat);
+          activeFriendId.value = friendId;
+          
+          let tempChats = getTempChats();
+          if (!tempChats.some(f => f.id === newTempChat.id)) {
+            tempChats.unshift(newTempChat);
+            if (tempChats.length > 20) tempChats.pop();
+            saveTempChats(tempChats);
+          }
+        }
+      } catch (err) {
+        ElMessage.error('无法获取该用户信息');
+      }
     }
   }
 );
@@ -308,53 +439,94 @@ onUnmounted(() => {
   <div class="chat-page">
     <div class="chat-layout">
       <aside class="friend-panel">
-        <div class="panel-title">好友申请</div>
-        <div v-loading="loadingRequests" class="request-list">
-          <div v-if="pendingRequests.length === 0" class="empty-text">暂无新的申请</div>
-          <div v-for="item in pendingRequests" :key="item.id" class="request-item">
-            <div class="request-user">
-              <el-avatar :size="34" :src="item.sender.avatar" />
-              <span>{{ item.sender.username }}</span>
-            </div>
-            <div class="request-actions">
-              <el-button type="primary" size="small" class="accept-btn" @click="acceptRequest(item.id)">同意</el-button>
-              <el-button size="small" class="reject-btn" @click="rejectRequest(item.id)">拒绝</el-button>
-            </div>
-          </div>
-        </div>
-
-        <div class="panel-title second">好友列表</div>
-        <div v-loading="loadingFriends" class="friend-list">
-          <div v-if="friends.length === 0" class="empty-text">还没有好友，先去动态里加好友吧</div>
-          <div
-            v-for="friend in friends"
-            :key="friend.id"
-            class="friend-item"
-            :class="{ active: activeFriendId === friend.id }"
-            @click="activeFriendId = friend.id"
-          >
-            <el-avatar :size="36" :src="friend.avatar" />
-            <div class="friend-meta">
-              <div class="name-row">
-                <div class="name">{{ friend.username }}</div>
-                <el-badge
-                  v-if="friend.unread_count > 0"
-                  :value="friend.unread_count > 99 ? '99+' : friend.unread_count"
-                  class="unread-badge"
+        <CollapsePanel title="好友申请" v-model="isRequestsExpanded">
+          <div v-loading="loadingRequests" class="request-list">
+            <div v-if="pendingRequests.length === 0" class="empty-text">暂无新的申请</div>
+            <div v-for="item in pendingRequests" :key="item.id" class="request-item">
+              <div class="request-user">
+                <el-avatar 
+                  :size="34" 
+                  :src="item.sender.avatar" 
+                  @click.stop="showUserProfile(item.sender.id)" 
+                  style="cursor: pointer" 
                 />
+                <span @click.stop="showUserProfile(item.sender.id)" style="cursor: pointer">{{ item.sender.username }}</span>
               </div>
-              <div class="bio">{{ friend.last_message || friend.bio || '这个好友还没有写简介' }}</div>
-              <div v-if="friend.last_message_time" class="last-time">{{ formatFriendTime(friend.last_message_time) }}</div>
+              <div class="request-actions">
+                <el-button type="primary" size="small" class="accept-btn" @click="acceptRequest(item.id)">同意</el-button>
+                <el-button size="small" class="reject-btn" @click="rejectRequest(item.id)">拒绝</el-button>
+              </div>
             </div>
           </div>
-        </div>
+        </CollapsePanel>
+
+        <CollapsePanel title="好友列表" v-model="isFriendsExpanded">
+          <div v-loading="loadingFriends" class="friend-list">
+            <div v-if="friendList.length === 0" class="empty-text">还没有好友，先去动态里加好友吧</div>
+            <div
+              v-for="friend in friendList"
+              :key="friend.id"
+              class="friend-item"
+              :class="{ active: activeFriendId === friend.id }"
+              @click="activeFriendId = friend.id"
+            >
+              <el-avatar :size="36" :src="friend.avatar" />
+              <div class="friend-meta">
+                <div class="name-row">
+                  <div class="name">{{ friend.username }}</div>
+                </div>
+                <div class="bio">{{ friend.bio || '这个好友还没有写简介' }}</div>
+              </div>
+            </div>
+          </div>
+        </CollapsePanel>
+
+        <CollapsePanel title="会话列表" :collapsible="false">
+          <div v-loading="loadingFriends" class="friend-list">
+            <div v-if="conversationList.length === 0" class="empty-text">暂无近期会话</div>
+            <div
+              v-for="friend in conversationList"
+              :key="friend.id"
+              class="friend-item"
+              :class="{ active: activeFriendId === friend.id }"
+              @click="activeFriendId = friend.id"
+            >
+              <el-avatar :size="36" :src="friend.avatar" />
+              <div class="friend-meta">
+                <div class="name-row">
+                  <div class="name">{{ friend.username }}</div>
+                  <el-tag v-if="friend.is_friend === 0" size="small" type="warning" class="list-temp-tag">临时会话</el-tag>
+                  <el-badge
+                    v-if="friend.unread_count > 0"
+                    :value="friend.unread_count > 99 ? '99+' : friend.unread_count"
+                    class="unread-badge"
+                  />
+                </div>
+                <div class="bio">{{ friend.last_message || friend.bio || '暂无消息' }}</div>
+                <div v-if="friend.last_message_time" class="last-time">{{ formatFriendTime(friend.last_message_time) }}</div>
+              </div>
+            </div>
+          </div>
+        </CollapsePanel>
       </aside>
 
       <section class="chat-panel">
         <template v-if="activeFriend">
           <div class="chat-header">
             <el-avatar :size="38" :src="activeFriend.avatar" />
-            <div class="chat-user">{{ activeFriend.username }}</div>
+            <div class="chat-user">
+              {{ activeFriend.username }}
+              <el-tag v-if="isTempChat" size="small" type="warning" class="temp-tag">临时会话</el-tag>
+            </div>
+          </div>
+          
+          <div v-if="isTempChat" class="temp-notice">
+            <el-alert 
+              title="你们还不是好友。为防止打扰，对方回复前您只能发送 1 条且不超过 150 字的消息。" 
+              type="warning" 
+              show-icon 
+              :closable="false"
+            />
           </div>
 
           <div v-loading="loadingMessages" ref="messageListRef" class="message-list">
@@ -373,10 +545,13 @@ onUnmounted(() => {
           <div class="composer">
             <el-input
               v-model="inputText"
-              placeholder="输入消息..."
+              :placeholder="canSendMessage ? '输入消息...' : '等待对方回复后才可继续发送...'"
+              :disabled="!canSendMessage"
+              :maxlength="isTempChat ? 150 : undefined"
+              :show-word-limit="isTempChat"
               @keyup.enter="sendMessage"
             />
-            <el-button type="primary" class="send-btn" :loading="sending" @click="sendMessage">发送</el-button>
+            <el-button type="primary" class="send-btn" :loading="sending" :disabled="!canSendMessage" @click="sendMessage">发送</el-button>
           </div>
         </template>
 
@@ -385,6 +560,9 @@ onUnmounted(() => {
         </template>
       </section>
     </div>
+    
+    <!-- 个人资料抽屉 -->
+    <PublicProfileDrawer v-model="publicProfileVisible" :user-id="selectedUserId" />
   </div>
 </template>
 
@@ -392,7 +570,7 @@ onUnmounted(() => {
 .chat-page { padding-bottom: 26px; }
 .chat-layout {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 30% 70%;
   gap: 16px;
 }
 .friend-panel,
@@ -402,8 +580,6 @@ onUnmounted(() => {
   box-shadow: 0 8px 24px rgba(0,0,0,0.04);
 }
 .friend-panel { padding: 14px; }
-.panel-title { font-size: 15px; font-weight: 900; color: var(--dark-charcoal); margin-bottom: 10px; }
-.panel-title.second { margin-top: 14px; }
 .request-list,
 .friend-list { display: flex; flex-direction: column; gap: 8px; }
 .request-item,
@@ -433,6 +609,7 @@ onUnmounted(() => {
 .friend-meta { min-width: 0; }
 .friend-meta .name-row { display: flex; align-items: center; gap: 8px; }
 .friend-meta .name { font-size: 14px; font-weight: 800; color: var(--dark-charcoal); }
+.list-temp-tag { font-weight: 700; transform: scale(0.9); transform-origin: left center; }
 .unread-badge :deep(.el-badge__content) {
   background: #ff4d4f;
   border: none;
@@ -455,7 +632,11 @@ onUnmounted(() => {
   gap: 10px;
   padding: 0 16px;
 }
-.chat-user { font-size: 15px; font-weight: 900; color: var(--dark-charcoal); }
+.chat-user { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 900; color: var(--dark-charcoal); }
+.temp-tag { font-weight: 700; border-radius: 4px; }
+.temp-notice {
+  padding: 10px 14px 0;
+}
 .message-list {
   flex: 1;
   padding: 14px;

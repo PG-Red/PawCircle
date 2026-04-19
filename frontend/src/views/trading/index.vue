@@ -24,8 +24,8 @@ const loadListings = async () => {
   loading.value = true;
   try {
     const res = await listingApi.getListings(page.value, 12, activeCategory.value, searchQuery.value);
-    items.value = res.items;
-    total.value = res.total;
+    items.value = res.data.items;
+    total.value = res.data.total;
   } catch {
     ElMessage.error('加载交易列表失败');
   } finally {
@@ -45,7 +45,7 @@ const onContact = async (listing: PetListing) => {
   contacting.value = true;
   try {
     const res = await listingApi.getListing(listing.id);
-    selectedListing.value = res;
+    selectedListing.value = res.data;
     sellerDialogVisible.value = true;
   } catch {
     ElMessage.error('获取卖家信息失败');
@@ -64,14 +64,6 @@ const goToChatWithSeller = async () => {
   }
 
   try {
-    const friendsRes = await socialApi.getFriends();
-    const isFriend = (friendsRes.data || []).some(friend => Number(friend.id) === Number(listing.seller.id));
-
-    if (!isFriend) {
-      ElMessage.warning('请先在对方主页添加好友，再进行私聊');
-      return;
-    }
-
     sellerDialogVisible.value = false;
     router.push({
       path: '/chat',

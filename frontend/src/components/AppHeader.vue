@@ -76,6 +76,29 @@
         </div>
       </div>
     </div>
+
+    <!-- 退出登录自定义弹窗 -->
+    <el-dialog
+      v-model="logoutDialogVisible"
+      width="320px"
+      :show-close="false"
+      class="custom-logout-dialog"
+      align-center
+    >
+      <div class="logout-dialog-content">
+        <div class="logout-icon-wrapper">
+          <el-icon><SwitchButton /></el-icon>
+        </div>
+        <h3 class="logout-title">退出登录</h3>
+        <p class="logout-desc">确定要退出当前账号吗？</p>
+      </div>
+      <template #footer>
+        <div class="logout-actions">
+          <el-button class="cancel-btn" @click="logoutDialogVisible = false">再想想</el-button>
+          <el-button class="confirm-btn" @click="confirmLogout">退出登录</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </header>
 </template>
 
@@ -84,7 +107,7 @@ defineOptions({ name: 'AppHeader' });
 
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { ElMessageBox, ElMessage } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import {
   House, Postcard, Calendar, ShoppingCart, ChatDotRound, Message,
   SwitchButton, User, Lock, ArrowDown, ArrowRight
@@ -147,19 +170,20 @@ const goTo = (section: 'info' | 'comments' | 'password') => {
   router.push(`/user/${section}`);
 };
 
+const logoutDialogVisible = ref(false);
+
 const handleLogout = () => {
   menuOpen.value = false;
-  ElMessageBox.confirm('确定要退出登录吗？', '退出登录', {
-    confirmButtonText: '退出',
-    cancelButtonText: '取消',
-    type: 'warning',
-  }).then(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('username');
-    localStorage.removeItem('avatar');
-    ElMessage.success('已退出登录');
-    router.push('/auth');
-  }).catch(() => {});
+  logoutDialogVisible.value = true;
+};
+
+const confirmLogout = () => {
+  logoutDialogVisible.value = false;
+  localStorage.removeItem('token');
+  localStorage.removeItem('username');
+  localStorage.removeItem('avatar');
+  ElMessage.success('已退出登录');
+  router.push('/auth');
 };
 </script>
 
@@ -265,6 +289,86 @@ const handleLogout = () => {
 .menu-fade-leave-active { transition: opacity 0.12s ease, transform 0.12s ease; }
 .menu-fade-enter-from { opacity: 0; transform: translateY(-6px) scale(0.97); }
 .menu-fade-leave-to  { opacity: 0; transform: translateY(-6px) scale(0.97); }
+
+/* 退出登录弹窗 */
+:global(.custom-logout-dialog) {
+  border-radius: 24px !important;
+  padding: 10px !important;
+}
+:global(.custom-logout-dialog .el-dialog__header) {
+  display: none;
+}
+:global(.custom-logout-dialog .el-dialog__body) {
+  padding: 24px 20px 10px !important;
+}
+:global(.custom-logout-dialog .el-dialog__footer) {
+  padding: 10px 20px 24px !important;
+}
+.logout-dialog-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.logout-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  background: #fee2e2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.logout-icon-wrapper .el-icon {
+  font-size: 26px;
+  color: #ef4444;
+}
+.logout-title {
+  font-size: 19px;
+  font-weight: 900;
+  color: var(--dark-charcoal);
+  margin: 0 0 8px 0;
+}
+.logout-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+.logout-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+.cancel-btn {
+  border-radius: 12px;
+  font-weight: 800;
+  height: 44px;
+  border: 1px solid rgba(0,0,0,0.08);
+  color: var(--dark-charcoal);
+  background: #f4f4f5;
+  margin: 0 !important;
+}
+.cancel-btn:hover {
+  background: #e4e4e7;
+  color: var(--dark-charcoal);
+  border-color: rgba(0,0,0,0.08);
+}
+.confirm-btn {
+  border-radius: 12px;
+  font-weight: 800;
+  height: 44px;
+  background: #ef4444;
+  border: none;
+  color: #fff;
+  margin: 0 !important;
+}
+.confirm-btn:hover {
+  background: #dc2626;
+  color: #fff;
+}
 
 @media (max-width: 960px) {
   .desktop-nav { display: none; }

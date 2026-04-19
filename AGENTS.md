@@ -57,12 +57,13 @@
   - 尽量复用已有 CSS 变量
   - 不随意更换整体视觉语言
 - 文案默认使用中文，风格自然、轻松，符合宠物社区产品气质
-- 优先判断是否可做成组件复用，提高代码的简洁度
+- **组件化思维**：设计与开发新功能或页面时，必须优先考虑是否可以将其设计并拆分成组件进行复用，避免大量代码堆砌在单一文件中，以提高代码的简洁度与可维护性。
 - 组件优先延续现有写法：
   - 优先查看 `frontend/src/components` 里的组件是否可以复用
-  - 其次查看 `frontend/src/views` 里各个文件里的 `components`  文件是否可以复用
-  - 多个地方重复利用的组件放在 `frontend\src\components`
-  - 当个页面重复利用的组件放在此页面单独的 `components` 文件里 
+  - 其次查看 `frontend/src/views` 里各个文件里的 `components` 文件是否可以复用
+  - 多个地方重复利用的组件放在 `frontend/src/components`
+  - 当前页面内重复利用的真实 UI 组件（如卡片、弹窗等）放在此页面单独的 `components` 目录里
+  - **切记**：子页面、子路由视图等非 UI 碎片的页面级组件，绝对**不要**放入 `components` 目录，应直接与父页面同级或放在对应的业务层级下。
 
 ## 5. 接口与数据约定
 
@@ -145,8 +146,10 @@
 
 若需要新增文件，优先遵循：
 
-- 新页面：放在 `frontend/src/views/<module>/`
-- 新组件：放在对应页面的 `components/` 或 `frontend/src/components/`
+- 新页面/子路由视图：直接放在对应的业务模块目录 `frontend/src/views/<module>/` 下（不要放进 `components`）
+- 新组件：
+  - 仅当前页面用的 UI 碎片组件（如特定卡片）：放在对应页面的 `components/` 
+  - 全局通用组件：放在 `frontend/src/components/`
 - 新接口：放在 `frontend/src/api/` 下已有业务文件中；仅在必要时新增业务 API 文件
 - 新后端接口：同时补齐 `routes` 与 `controllers`
 

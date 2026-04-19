@@ -47,6 +47,7 @@ export interface FriendItem {
   unread_count: number;
   last_message?: string;
   last_message_time?: string;
+  is_friend?: number; // 1为好友 0为临时会话
 }
 
 export interface ConversationItem {

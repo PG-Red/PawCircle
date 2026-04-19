@@ -65,8 +65,8 @@ async function request<T = any>(
     if (response.status === 401) {
       localStorage.removeItem('token');
       if (!endpoint.startsWith('/auth/')) {
-        window.location.href = '/auth';
-      }
+      window.location.href = '/auth';
+    }
     }
 
     throw new RequestError(response.status, message, body);

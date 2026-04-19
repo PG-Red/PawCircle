@@ -42,7 +42,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { RouterLink, RouterView } from 'vue-router';
-import { Camera, User, Lock, ChatDotRound } from '@element-plus/icons-vue';
+import { Camera, User, Lock, ChatDotRound, Setting } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import { userApi } from '@/api/index';
 import { eventBus } from '@/utils/eventBus';
@@ -54,6 +54,7 @@ const tabs = [
   { to: '/user/info',     label: '基本信息', icon: User },
   { to: '/user/comments', label: '评论管理', icon: ChatDotRound },
   { to: '/user/password', label: '修改密码', icon: Lock },
+  { to: '/user/settings', label: '设置', icon: Setting },
 ];
 
 onMounted(async () => {

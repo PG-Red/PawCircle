@@ -7,7 +7,7 @@
         </div>
         <div class="section-heading-copy">
       <h2>基本信息</h2>
-          <p>调整资料展示方式，决定别人能看到多少关于你和毛孩子的内容。</p>
+          <p>完善您的基本资料，让更多毛孩子家长认识你。</p>
         </div>
       </div>
     </div>
@@ -23,58 +23,6 @@
           </div>
         </el-form-item>
 
-        <el-form-item label="公开设置">
-          <div class="privacy-panel">
-            <div class="privacy-intro">
-              <span class="privacy-kicker">PROFILE VISIBILITY</span>
-              <h3>谁能看见你的宠物档案</h3>
-              <p>你可以单独控制“是否公开宠物”以及“公开时是否展示详细信息”，让资料呈现更灵活。</p>
-            </div>
-
-            <button
-              type="button"
-              class="privacy-option"
-              :class="{ active: form.show_pets_public }"
-              @click="form.show_pets_public = !form.show_pets_public"
-            >
-              <div class="privacy-copy">
-                <div class="privacy-title-row">
-                  <span class="privacy-badge">01</span>
-                  <h4>公开宠物</h4>
-                </div>
-                <p>开启后，其他人可以在你的公开主页中看到你拥有的宠物。</p>
-              </div>
-            <el-switch
-              v-model="form.show_pets_public"
-                class="privacy-switch"
-                @click.stop
-              />
-            </button>
-
-            <button
-              type="button"
-              class="privacy-option detail-option"
-              :class="{ active: form.show_pets_public && form.show_pet_details_public, disabled: !form.show_pets_public }"
-              @click="form.show_pets_public && (form.show_pet_details_public = !form.show_pet_details_public)"
-            >
-              <div class="privacy-copy">
-                <div class="privacy-title-row">
-                  <span class="privacy-badge">02</span>
-                  <h4>公开宠物详情</h4>
-                </div>
-                <p>
-                  开启后，会展示品种、生日、描述等更完整的信息；关闭时仅显示宠物名称和基础卡片。
-                </p>
-              </div>
-            <el-switch
-              v-model="form.show_pet_details_public"
-                class="privacy-switch"
-              :disabled="!form.show_pets_public"
-                @click.stop
-            />
-            </button>
-          </div>
-        </el-form-item>
         <el-button type="primary" class="save-btn" :loading="savingProfile" @click="saveProfile">
           <span class="save-btn-text">保存修改</span>
         </el-button>
@@ -94,8 +42,6 @@ const form = reactive({
   username: '',
   avatar: '',
   bio: '',
-  show_pets_public: true,
-  show_pet_details_public: true,
 });
 const savingProfile = ref(false);
 
@@ -105,8 +51,6 @@ onMounted(async () => {
     form.username = res.data.username || '';
     form.avatar = res.data.avatar || '';
     form.bio = res.data.bio || '';
-    form.show_pets_public = !!res.data.show_pets_public;
-    form.show_pet_details_public = !!res.data.show_pet_details_public;
   } catch {
     form.username = localStorage.getItem('username') || '';
   }
@@ -119,14 +63,10 @@ const saveProfile = async () => {
       username: form.username,
       avatar: form.avatar || null,
       bio: form.bio,
-      show_pets_public: form.show_pets_public,
-      show_pet_details_public: form.show_pet_details_public,
     });
     form.username = res.data.username || '';
     form.avatar = res.data.avatar || '';
     form.bio = res.data.bio || '';
-    form.show_pets_public = !!res.data.show_pets_public;
-    form.show_pet_details_public = !!res.data.show_pet_details_public;
     localStorage.setItem('username', form.username);
     if (form.avatar) {
       localStorage.setItem('avatar', form.avatar);
@@ -261,114 +201,6 @@ const saveProfile = async () => {
   color: #fa8c16;
 }
 
-.privacy-panel {
-  display: grid;
-  gap: 14px;
-}
-
-.privacy-intro {
-  padding: 18px 20px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.12) 0%, rgba(255, 244, 217, 0.72) 100%);
-  border: 1px solid rgba(251, 191, 36, 0.18);
-}
-
-.privacy-kicker {
-  display: inline-block;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  font-weight: 800;
-  color: #b7791f;
-  margin-bottom: 8px;
-}
-
-.privacy-intro h3 {
-  margin: 0 0 6px;
-  font-size: 18px;
-  font-weight: 900;
-  color: var(--dark-charcoal);
-}
-
-.privacy-intro p {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.7;
-  color: rgba(58, 45, 26, 0.72);
-}
-
-.privacy-option {
-  width: 100%;
-  border: 1px solid rgba(224, 210, 180, 0.9);
-  border-radius: 18px;
-  background: rgba(255,255,255,0.82);
-  padding: 18px 20px;
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  text-align: left;
-  cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-}
-
-.privacy-option:hover {
-  transform: translateY(-1px);
-  border-color: rgba(251, 191, 36, 0.45);
-  box-shadow: 0 12px 24px rgba(242, 180, 27, 0.08);
-}
-
-.privacy-option.active {
-  border-color: rgba(251, 191, 36, 0.65);
-  box-shadow: 0 14px 28px rgba(242, 180, 27, 0.12);
-}
-
-.privacy-option.disabled {
-  opacity: 0.58;
-  cursor: not-allowed;
-}
-
-.privacy-copy {
-  flex: 1;
-}
-
-.privacy-title-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.privacy-badge {
-  min-width: 28px;
-  height: 28px;
-  padding: 0 8px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(251, 191, 36, 0.18);
-  color: #8a5a11;
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.privacy-copy h4 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 900;
-  color: var(--dark-charcoal);
-}
-
-.privacy-copy p {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--text-secondary);
-}
-
-.privacy-switch {
-  align-self: center;
-}
-
 .save-btn {
   margin-top: 8px;
   min-width: 136px;
@@ -407,11 +239,6 @@ const saveProfile = async () => {
   box-shadow: 0 0 0 2px rgba(242, 180, 27, 0.4) inset !important;
 }
 
-:deep(.el-switch.is-checked .el-switch__core) {
-  background-color: #f2b41b;
-  border-color: #f2b41b;
-}
-
 @media (max-width: 768px) {
   .section-card {
     padding: 20px 18px;
@@ -424,11 +251,6 @@ const saveProfile = async () => {
 
   .section-heading-copy p {
     width: 100%;
-  }
-
-  .privacy-option {
-    padding: 16px;
-    align-items: flex-start;
   }
 }
 </style>

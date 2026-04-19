@@ -79,7 +79,7 @@ const canSendFriendRequest = computed(() => state.profile?.friend_status === 'no
 const canOpenChat = computed(() => state.profile?.friend_status === 'friends');
 
 const goToChat = async () => {
-  if (!state.profile || !canOpenChat.value) return;
+  if (!state.profile) return;
   visible.value = false;
   await router.push({ path: '/chat', query: { friendId: String(state.profile.id) } });
 };
@@ -117,7 +117,6 @@ defineExpose({ loadProfile });
               {{ friendActionText }}
             </el-button>
             <el-button
-              v-if="canOpenChat"
               class="chat-btn"
               @click="goToChat"
             >
