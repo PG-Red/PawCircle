@@ -17,12 +17,15 @@ export interface PublicPetDetail extends PublicPetSummary {
 
 export interface PublicUserProfile {
   id: number;
+  user_code: string;
   username: string;
   avatar: string;
   bio: string;
   created_at: string;
+
   show_pets_public: boolean;
   show_pet_details_public: boolean;
+  chat_permission?: 'all' | 'friends_only' | 'none';
   friend_status: 'self' | 'none' | 'pending_sent' | 'pending_received' | 'friends';
   pets: Array<PublicPetSummary | PublicPetDetail>;
 }
@@ -48,6 +51,7 @@ export interface FriendItem {
   last_message?: string;
   last_message_time?: string;
   is_friend?: number; // 1为好友 0为临时会话
+  last_active_at?: string; // 最后活跃时间
 }
 
 export interface ConversationItem {
@@ -65,6 +69,8 @@ export interface PrivateMessage {
   sender_id: number;
   receiver_id: number;
   content: string;
+  image?: string;
+  is_read: number | boolean;
   created_at: string;
 }
 
@@ -76,6 +82,9 @@ export const sendFriendRequestService = (receiverId: number, message?: string) =
     receiver_id: receiverId,
     message,
   });
+
+export const getUnreadSummaryService = () =>
+  request<ApiResponse<{ pending_count: number; unread_count: number }>>('GET', '/social/unread-summary');
 
 export const getPendingFriendRequestsService = () =>
   request<ApiResponse<FriendRequest[]>>('GET', '/social/requests/pending');
@@ -98,8 +107,8 @@ export const getMessagesWithFriendService = (friendId: number, page = 1, pageSiz
     `/social/messages/${friendId}?page=${page}&pageSize=${pageSize}`
   );
 
-export const sendMessageToFriendService = (friendId: number, content: string) =>
-  request<ApiResponse<PrivateMessage>>('POST', `/social/messages/${friendId}`, { content });
+export const sendMessageToFriendService = (friendId: number, content: string, image?: string) =>
+  request<ApiResponse<PrivateMessage>>('POST', `/social/messages/${friendId}`, { content, image });
 
 export const markMessagesAsReadService = (friendId: number) =>
   request<ApiResponse<null>>('POST', `/social/messages/${friendId}/read`);

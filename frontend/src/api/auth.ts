@@ -26,7 +26,7 @@ export const registerService = (
   code: string,
   password: string
 ) =>
-  request<ApiResponse<{ id: number; username: string; email: string; token: string }>>(
+  request<ApiResponse<{ id: number; user_code: string; username: string; email: string; token: string }>>(
     'POST',
     '/auth/register',
     { username, email, code, password }
@@ -42,6 +42,7 @@ export const loginService = (
 ) =>
   request<ApiResponse<{
     id: number;
+    user_code: string;
     username: string;
     email: string;
     avatar: string;

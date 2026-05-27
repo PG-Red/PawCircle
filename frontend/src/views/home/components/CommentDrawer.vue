@@ -3,6 +3,7 @@ import { ref, watch, nextTick } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Promotion, Delete } from '@element-plus/icons-vue';
 import { commentApi, type Comment } from '@/api/index';
+import { defaultAvatar } from '@/utils/constants';
 
 const props = defineProps<{ modelValue: boolean; momentId: number | null; highlightCommentId?: number | null }>();
 const emit = defineEmits<{
@@ -103,7 +104,7 @@ export default { name: 'CommentDrawer' };
         <div v-if="loading" class="loading-tip"><el-skeleton :rows="3" animated /></div>
         <div v-else-if="comments.length === 0" class="empty-tip">暂无评论，来抢沙发吧！</div>
         <div v-for="c in comments" :key="c.id" :id="`comment-${c.id}`" :class="['comment-item', { 'comment-item--highlight': c.id === highlightCommentId }]">
-          <el-avatar :size="36" :src="c.user.avatar" class="c-avatar" />
+          <el-avatar :size="36" :src="c.user.avatar || defaultAvatar" class="c-avatar" />
           <div class="c-body">
             <div class="c-header">
               <span class="c-name">{{ c.user.username }}</span>

@@ -13,9 +13,13 @@
     </div>
     <div class="section-card">
       <el-form label-position="top" class="profile-form">
+        <el-form-item label="用户编号">
+          <el-input :model-value="form.user_code" readonly placeholder="系统自动生成的 8 位编号" />
+        </el-form-item>
         <el-form-item label="用户名">
           <el-input v-model="form.username" placeholder="输入用户名" :prefix-icon="User" />
         </el-form-item>
+
         <el-form-item label="个人简介">
           <div class="bio-wrapper">
             <textarea v-model="form.bio" class="bio-textarea" placeholder="介绍一下自己..." :maxlength="200"></textarea>
@@ -39,6 +43,7 @@ import { userApi } from '@/api/index';
 import { eventBus } from '@/utils/eventBus';
 
 const form = reactive({
+  user_code: '',
   username: '',
   avatar: '',
   bio: '',
@@ -48,10 +53,12 @@ const savingProfile = ref(false);
 onMounted(async () => {
   try {
     const res = await userApi.getProfile();
+    form.user_code = res.data.user_code || '';
     form.username = res.data.username || '';
     form.avatar = res.data.avatar || '';
     form.bio = res.data.bio || '';
   } catch {
+    form.user_code = localStorage.getItem('user_code') || '';
     form.username = localStorage.getItem('username') || '';
   }
 });
@@ -64,10 +71,13 @@ const saveProfile = async () => {
       avatar: form.avatar || null,
       bio: form.bio,
     });
+    form.user_code = res.data.user_code || form.user_code;
     form.username = res.data.username || '';
     form.avatar = res.data.avatar || '';
     form.bio = res.data.bio || '';
+    localStorage.setItem('user_code', form.user_code);
     localStorage.setItem('username', form.username);
+
     if (form.avatar) {
       localStorage.setItem('avatar', form.avatar);
       eventBus.emit('avatar-changed', form.avatar);

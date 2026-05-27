@@ -3,7 +3,12 @@
     <AppHeader v-if="$route.name !== 'auth' && $route.name !== 'moment-detail'" />
 
     <main class="main-content" :class="{ 'no-header': $route.name === 'moment-detail' }">
-      <router-view />
+      <router-view v-slot="{ Component, route }">
+        <keep-alive>
+          <component :is="Component" v-if="route.meta.keepAlive" :key="route.fullPath" />
+        </keep-alive>
+        <component :is="Component" v-if="!route.meta.keepAlive" :key="route.fullPath" />
+      </router-view>
     </main>
 
     <!-- Mobile Bottom Tab Bar -->
@@ -13,7 +18,9 @@
         <span>PawTrace</span>
       </router-link>
       <router-link to="/chat" class="tab-item" active-class="active">
-        <el-icon><Message /></el-icon>
+        <el-badge :value="unreadTotal" :hidden="unreadTotal === 0" :max="99" class="tab-badge">
+          <el-icon><Message /></el-icon>
+        </el-badge>
         <span>私聊</span>
       </router-link>
       <router-link to="/profiles" class="tab-item" active-class="active">
@@ -24,10 +31,7 @@
         <el-icon><Calendar /></el-icon>
         <span>喂养</span>
       </router-link>
-      <router-link to="/trading" class="tab-item" active-class="active">
-        <el-icon><ShoppingCart /></el-icon>
-        <span>交易</span>
-      </router-link>
+
       <router-link to="/ai-assistant" class="tab-item" active-class="active">
         <el-icon><ChatDotRound /></el-icon>
         <span>AI</span>
@@ -37,8 +41,31 @@
 </template>
 
 <script setup lang="ts">
-import { House, Postcard, Calendar, ShoppingCart, ChatDotRound, Message } from '@element-plus/icons-vue';
+import { onMounted, onUnmounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { House, Postcard, Calendar, ChatDotRound, Message } from '@element-plus/icons-vue';
 import AppHeader from './components/AppHeader.vue';
+import { unreadTotal, startUnreadPolling, stopUnreadPolling } from '@/utils/unreadState';
+
+const route = useRoute();
+
+onMounted(() => {
+  if (route.name !== 'auth') {
+    startUnreadPolling();
+  }
+});
+
+onUnmounted(() => {
+  stopUnreadPolling();
+});
+
+watch(() => route.name, (newName) => {
+  if (newName === 'auth') {
+    stopUnreadPolling();
+  } else {
+    startUnreadPolling();
+  }
+});
 </script>
 
 <style scoped>
@@ -112,6 +139,13 @@ import AppHeader from './components/AppHeader.vue';
   .tab-item.active .el-icon {
     color: var(--dark-charcoal);
     transform: scale(1.1);
+  }
+  
+  .tab-badge :deep(.el-badge__content) {
+    top: 0px;
+    right: 0px;
+    transform: scale(0.8) translate(50%, -50%);
+    border: none;
   }
 }
 

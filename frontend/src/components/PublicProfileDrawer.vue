@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { userApi, socialApi, type PublicUserProfile, type PublicPetDetail } from '@/api';
+import PetDetailDialog from '@/components/PetDetailDialog.vue';
+import { defaultAvatar } from '@/utils/constants';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -30,12 +32,31 @@ const profile = computed<PublicUserProfile | null>(() => state.profile);
 
 const calcAge = (birthday: string) => {
   if (!birthday) return '未知';
-  const birth = new Date(birthday);
-  const now = new Date();
-  let years = now.getFullYear() - birth.getFullYear();
-  const m = now.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) years--;
-  return years > 0 ? `${years}岁` : '不足1岁';
+  const birthDate = new Date(birthday);
+  const today = new Date();
+
+  let years = today.getFullYear() - birthDate.getFullYear();
+  let months = today.getMonth() - birthDate.getMonth();
+  let days = today.getDate() - birthDate.getDate();
+
+  if (days < 0) {
+    months--;
+    const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+    days += lastMonth.getDate();
+  }
+
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  if (years === 0 && months === 0) return '不足一个月';
+
+  let result = '';
+  if (years > 0) result += `${years}年`;
+  if (months > 0) result += `${months}个月`;
+
+  return result || '不足一个月';
 };
 
 const loadProfile = async () => {
@@ -86,6 +107,20 @@ const goToChat = async () => {
 
 const readPet = (pet: unknown) => pet as PublicPetDetail;
 
+const activePetId = ref<number | null>(null);
+const activePetData = ref<any>(null);
+const petDetailVisible = ref(false);
+
+const handlePetClick = (pet: unknown) => {
+  if (!state.profile?.show_pet_details_public) {
+    ElMessage.warning('用户未公开宠物详情');
+    return;
+  }
+  activePetId.value = (pet as { id: number }).id;
+  activePetData.value = pet;
+  petDetailVisible.value = true;
+};
+
 defineExpose({ loadProfile });
 </script>
 
@@ -101,11 +136,13 @@ defineExpose({ loadProfile });
     <div v-loading="state.loading" class="profile-wrap">
       <template v-if="profile">
         <div class="hero">
-          <el-avatar :size="72" :src="profile.avatar" class="hero-avatar" />
+          <el-avatar :size="72" :src="profile.avatar || defaultAvatar" class="hero-avatar" />
           <div class="hero-meta">
             <h3>{{ profile.username }}</h3>
+            <div class="hero-code">ID：{{ profile.user_code }}</div>
             <p>{{ profile.bio || '这个用户还没有填写简介' }}</p>
           </div>
+
           <div class="hero-actions">
             <el-button
               type="primary"
@@ -116,7 +153,23 @@ defineExpose({ loadProfile });
             >
               {{ friendActionText }}
             </el-button>
+            <el-tooltip
+              v-if="profile.chat_permission === 'none'"
+              content="对方已关闭私信"
+              placement="top"
+              :show-after="200"
+            >
+              <div style="display: inline-block;">
+                <el-button
+                  class="chat-btn disabled-btn"
+                  disabled
+                >
+                  发私聊
+                </el-button>
+              </div>
+            </el-tooltip>
             <el-button
+              v-else
               class="chat-btn"
               @click="goToChat"
             >
@@ -135,11 +188,14 @@ defineExpose({ loadProfile });
           </template>
           <template v-else>
             <div class="pet-grid">
-              <div v-for="pet in profile.pets" :key="pet.id" class="pet-card">
-                <el-image v-if="pet.image" :src="pet.image" class="pet-cover" fit="cover" referrerPolicy="no-referrer" />
+              <div v-for="pet in profile.pets" :key="pet.id" class="pet-card" @click="handlePetClick(pet)" style="cursor: pointer;">
+                <el-image v-if="pet.image" :src="pet.image" class="pet-cover" fit="cover" referrerPolicy="no-referrer" lazy />
                 <div class="pet-name">{{ pet.name }}</div>
 
-                <template v-if="profile.show_pet_details_public">
+                <template v-if="!profile.show_pet_details_public">
+                  <div class="pet-meta">{{ readPet(pet).gender }}</div>
+                </template>
+                <template v-else>
                   <div class="pet-meta">{{ readPet(pet).breed }} · {{ readPet(pet).gender }}</div>
                   <div class="pet-meta">{{ readPet(pet).birthday?.slice(0, 10) }} · {{ calcAge(readPet(pet).birthday) }}</div>
                   <div class="pet-desc">{{ readPet(pet).description || '暂无描述' }}</div>
@@ -150,6 +206,7 @@ defineExpose({ loadProfile });
         </div>
       </template>
     </div>
+    <PetDetailDialog v-model="petDetailVisible" :pet-id="activePetId" :initial-data="activePetData" />
   </el-drawer>
 </template>
 
@@ -185,6 +242,10 @@ defineExpose({ loadProfile });
   font-weight: 800;
   color: var(--dark-charcoal);
 }
+.disabled-btn {
+  opacity: 0.6;
+  cursor: not-allowed !important;
+}
 .section-card {
   background: var(--card-bg);
   border-radius: var(--border-radius-lg);
@@ -197,6 +258,10 @@ defineExpose({ loadProfile });
   border-radius: var(--border-radius-md);
   background: var(--bg-color);
   padding: 10px;
+  transition: transform 0.2s;
+}
+.pet-card:hover {
+  transform: translateY(-2px);
 }
 .pet-cover {
   width: 100%;

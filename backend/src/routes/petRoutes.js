@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { getPets, getPetById, addPet, updatePet, deletePet } = require('../controllers/petController');
-const { getFeedingRecords, addFeedingRecord } = require('../controllers/feedingController');
+
+const { getRoutines, addRoutine, updateRoutine, deleteRoutine, getRoutineRecords, toggleRoutineRecord } = require('../controllers/routineController');
 const authMiddleware = require('../middleware/auth');
 
 router.use(authMiddleware);
@@ -12,9 +13,15 @@ router.post('/', addPet);
 router.put('/:petId', updatePet);
 router.delete('/:petId', deletePet);
 
-// 喂养记录（嵌套在宠物路由下）
-router.get('/:petId/feeding-records', getFeedingRecords);
-router.post('/:petId/feeding-records', addFeedingRecord);
+
+
+// 打卡活动与记录
+router.get('/:petId/routines', getRoutines);
+router.post('/:petId/routines', addRoutine);
+router.put('/:petId/routines/:routineId', updateRoutine);
+router.delete('/:petId/routines/:routineId', deleteRoutine);
+router.get('/:petId/routine-records', getRoutineRecords);
+router.post('/:petId/routines/:routineId/toggle', toggleRoutineRecord);
 
 module.exports = router;
 

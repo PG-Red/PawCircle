@@ -210,6 +210,7 @@ const getFriends = async (req, res) => {
     try {
       const [rows] = await connection.query(
         `SELECT u.id, u.username, u.avatar, u.bio,
+                u.last_active_at,
                 f.created_at AS friend_since,
                 m.content AS last_message,
                 m.created_at AS last_message_time,
@@ -317,7 +318,7 @@ const getMessagesWithFriend = async (req, res) => {
       );
 
       const [rows] = await connection.query(
-        `SELECT id, sender_id, receiver_id, content, created_at
+        `SELECT id, sender_id, receiver_id, content, image, is_read, created_at
          FROM private_messages
          WHERE (sender_id = ? AND receiver_id = ?)
             OR (sender_id = ? AND receiver_id = ?)
@@ -330,7 +331,10 @@ const getMessagesWithFriend = async (req, res) => {
         total: countRows[0].total,
         page,
         pageSize,
-        items: rows.reverse(),
+        items: rows.map(r => ({
+          ...r,
+          is_read: r.is_read === 1 || r.is_read === true || (Buffer.isBuffer(r.is_read) && r.is_read[0] === 1) ? 1 : 0
+        })).reverse(),
       }));
     } finally {
       connection.release();
@@ -368,14 +372,10 @@ const sendMessageToFriend = async (req, res) => {
   try {
     const userId = req.userId;
     const { friendId } = req.params;
-    const { content } = req.body;
+    const { content, image } = req.body;
 
-    if (!content || !content.trim()) {
+    if ((!content || !content.trim()) && !image) {
       return res.status(400).json(errorResponse(400, '消息内容不能为空'));
-    }
-
-    if (content.length > 150) {
-      return res.status(400).json(errorResponse(400, '消息长度不能超过150字'));
     }
 
     const connection = await pool.getConnection();
@@ -391,21 +391,20 @@ const sendMessageToFriend = async (req, res) => {
       const chatPermission = receiverSettingRows[0].chat_permission;
 
       if (chatPermission === 'none') {
-        return res.status(403).json(errorResponse(403, '对方已关闭私信功能'));
+        return res.status(403).json(errorResponse(403, '对方已经关闭私聊回复'));
       }
 
       const [friendRows] = await connection.query(
         'SELECT id FROM friends WHERE user_id = ? AND friend_id = ? LIMIT 1',
         [userId, friendId]
       );
+      const isFriend = friendRows.length > 0;
 
-      if (chatPermission === 'friends_only' && friendRows.length === 0) {
-        return res.status(403).json(errorResponse(403, '对方仅允许好友发送私信'));
-      }
+      // 如果不是好友，无论 chatPermission 是什么，都需要查询历史消息看是否有互动
+      let sentCount = 0;
+      let repliedCount = 0;
       
-      // 如果不是好友，进行临时会话限制校验
-      if (friendRows.length === 0) {
-        // 查询双向消息记录
+      if (!isFriend) {
         const [messages] = await connection.query(
           `SELECT sender_id, receiver_id 
            FROM private_messages 
@@ -415,9 +414,6 @@ const sendMessageToFriend = async (req, res) => {
           [userId, friendId, friendId, userId]
         );
 
-        let sentCount = 0;
-        let repliedCount = 0;
-
         for (const msg of messages) {
           if (msg.sender_id === userId) {
             sentCount++;
@@ -425,7 +421,22 @@ const sendMessageToFriend = async (req, res) => {
             repliedCount++;
           }
         }
+      }
 
+      // 如果接收方设置为“仅好友”，拦截不是好友的情况
+      // 但是豁免：如果对方已经回复过或者主动发过消息（repliedCount > 0），认为是已存在的临时会话，不屏蔽
+      if (chatPermission === 'friends_only' && !isFriend && repliedCount === 0) {
+        return res.status(403).json(errorResponse(403, '对方仅允许好友发送私信'));
+      }
+
+      // 好友消息限制 500 字，临时会话限制 150 字（宠物档案等结构化消息除外）
+      const maxLength = isFriend ? 500 : 150;
+      if (content && !content.startsWith('[pet_card]') && content.trim().length > maxLength) {
+        return res.status(400).json(errorResponse(400, `消息长度不能超过${maxLength}字`));
+      }
+      
+      // 如果不是好友，进行临时会话限制校验
+      if (!isFriend) {
         // 如果发过消息，但对方还没回复，就不能再发了
         if (sentCount >= 1 && repliedCount === 0) {
           return res.status(403).json(errorResponse(403, '对方还不是您的好友。您已发送过临时消息，请等待对方回复后再继续发送。'));
@@ -433,26 +444,56 @@ const sendMessageToFriend = async (req, res) => {
       }
 
       const [result] = await connection.query(
-        'INSERT INTO private_messages (sender_id, receiver_id, content) VALUES (?, ?, ?)',
-        [userId, friendId, content.trim()]
+        'INSERT INTO private_messages (sender_id, receiver_id, content, image) VALUES (?, ?, ?, ?)',
+        [userId, friendId, content ? content.trim() : null, image || null]
       );
 
       const [rows] = await connection.query(
-        'SELECT id, sender_id, receiver_id, content, created_at FROM private_messages WHERE id = ?',
+        'SELECT id, sender_id, receiver_id, content, image, is_read, created_at FROM private_messages WHERE id = ?',
         [result.insertId]
       );
 
-      res.json(successResponse(rows[0], '发送成功'));
+      const msg = rows[0];
+      msg.is_read = msg.is_read === 1 || msg.is_read === true || (Buffer.isBuffer(msg.is_read) && msg.is_read[0] === 1) ? 1 : 0;
+
+      res.json(successResponse(msg, '发送成功'));
     } finally {
       connection.release();
     }
   } catch (error) {
-    console.error(error);
-    res.status(500).json(errorResponse(500, '服务器错误'));
+    console.error('[sendMessageToFriend ERROR]', error);
+    res.status(500).json(errorResponse(500, error.message || '服务器错误'));
+  }
+};
+
+const getUnreadSummary = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const connection = await pool.getConnection();
+    try {
+      const [pendingRows] = await connection.query(
+        "SELECT COUNT(*) AS count FROM friend_requests WHERE receiver_id = ? AND status = 'pending'",
+        [userId]
+      );
+      const [unreadRows] = await connection.query(
+        "SELECT COUNT(*) AS count FROM private_messages WHERE receiver_id = ? AND is_read = 0",
+        [userId]
+      );
+      res.json(successResponse({
+        pending_count: Number(pendingRows[0].count || 0),
+        unread_count: Number(unreadRows[0].count || 0)
+      }));
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('获取未读汇总失败:', error);
+    res.status(500).json(errorResponse(500, '服务器内部错误'));
   }
 };
 
 module.exports = {
+  getUnreadSummary,
   getPendingRequests,
   sendFriendRequest,
   acceptFriendRequest,

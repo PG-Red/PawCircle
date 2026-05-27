@@ -2,6 +2,7 @@
 import { ref, computed, useAttrs } from 'vue';
 import { ChatRound, Star, Share, MoreFilled, Delete, Warning } from '@element-plus/icons-vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import { defaultAvatar } from '@/utils/constants';
 
 interface Moment {
   id: number;
@@ -17,11 +18,10 @@ interface Moment {
   user?: { id: number };
 }
 
-const props = defineProps<{ moment: Moment }>();
+const props = defineProps<{ moment: Moment; canDelete?: boolean }>();
 const attrs = useAttrs();
 const emit = defineEmits<{
   (e: 'delete', id: number): void;
-  (e: 'report', id: number): void;
   (e: 'comment', id: number): void;
   (e: 'like', id: number): void;
   (e: 'user-click', userId: number): void;
@@ -35,7 +35,6 @@ const likesCount = computed(() => props.moment.likes ?? 0);
 const toggleMenu = (e: Event) => { e.stopPropagation(); menuOpen.value = !menuOpen.value; };
 const closeMenu = () => { menuOpen.value = false; };
 const onDelete = () => { menuOpen.value = false; deleteDialogVisible.value = true; };
-const onReport = () => { menuOpen.value = false; emit('report', props.moment.id); };
 const onComment = () => { emit('comment', props.moment.id); };
 const onLike = () => { emit('like', props.moment.id); };
 const onUserClick = () => {
@@ -79,17 +78,16 @@ export default { name: 'MomentCard' };
 
   <div class="moment-card" v-bind="attrs" @click="closeMenu">
     <div class="moment-header">
-      <el-avatar :size="48" :src="moment.avatar" class="moment-avatar clickable-avatar" @click.stop="onUserClick" />
+      <el-avatar :size="48" :src="moment.avatar || defaultAvatar" class="moment-avatar clickable-avatar" @click.stop="onUserClick" />
       <div class="user-meta">
         <span class="nickname">{{ moment.nickname }}</span>
         <span class="time">{{ moment.time }}</span>
       </div>
-      <div class="more-menu-wrapper">
+      <div v-if="canDelete" class="more-menu-wrapper">
         <el-button circle class="more-btn" @click.stop="toggleMenu"><el-icon><MoreFilled /></el-icon></el-button>
         <transition name="menu-fade">
           <div v-if="menuOpen" class="dropdown-menu" @click.stop>
             <div class="dropdown-item delete" @click="onDelete"><el-icon><Delete /></el-icon><span>删除</span></div>
-            <div class="dropdown-item report" @click="onReport"><el-icon><Warning /></el-icon><span>举报</span></div>
           </div>
         </transition>
       </div>
@@ -97,7 +95,7 @@ export default { name: 'MomentCard' };
     <div class="moment-content">
       <p>{{ moment.content }}</p>
       <div v-if="moment.image" class="image-wrapper">
-        <el-image :src="moment.image" class="moment-image" fit="cover" referrerPolicy="no-referrer" />
+        <el-image :src="moment.image" class="moment-image" fit="cover" referrerPolicy="no-referrer" lazy />
       </div>
     </div>
     <div class="moment-footer">
@@ -130,6 +128,12 @@ export default { name: 'MomentCard' };
   margin-bottom: 24px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
   position: relative;
+  transition: transform 0.3s ease;
+  cursor: pointer;
+}
+
+.moment-card:hover {
+  transform: scale(1.02);
 }
 
 .moment-header {
@@ -189,7 +193,7 @@ export default { name: 'MomentCard' };
   right: 0;
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  border: 1px solid #ebebeb;
   padding: 6px;
   min-width: 120px;
   z-index: 100;
@@ -213,14 +217,6 @@ export default { name: 'MomentCard' };
 
 .dropdown-item.delete:hover {
   background: #fff1f0;
-}
-
-.dropdown-item.report {
-  color: #fa8c16;
-}
-
-.dropdown-item.report:hover {
-  background: #fff7e6;
 }
 
 .menu-fade-enter-active,

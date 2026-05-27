@@ -6,62 +6,77 @@ const getMoments = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const pageSize = parseInt(req.query.pageSize) || 10;
+    const filter = req.query.filter || 'all'; // 'all' 或 'friends'
     const userId = req.userId;
     const offset = (page - 1) * pageSize;
 
     const connection = await pool.getConnection();
 
     try {
-      // 查询动态列表：过滤掉当前用户已软删除（隐藏）的动态
-      const [moments] = await connection.query(
-        `SELECT m.id, m.user_id, m.pet_id, m.content, m.image, m.likes_count, m.comments_count, m.created_at,
-                u.username, u.avatar, p.name as pet_name,
-                CASE WHEN l.id IS NOT NULL THEN true ELSE false END as is_liked,
-                CASE WHEN c.id IS NOT NULL THEN true ELSE false END as is_commented
-         FROM moments m
-         JOIN users u ON m.user_id = u.id
-         LEFT JOIN pets p ON m.pet_id = p.id
-         LEFT JOIN likes l ON m.id = l.moment_id AND l.user_id = ?
-         LEFT JOIN comments c ON m.id = c.moment_id AND c.user_id = ?
-         WHERE NOT (m.is_deleted_by_owner = 1 AND m.user_id = ?)
-         ORDER BY m.created_at DESC
-         LIMIT ? OFFSET ?`,
-        [userId, userId, userId, pageSize, offset]
-      );
+      let filterQuery = '';
+      let queryParams = [userId, userId, userId];
+      let countParams = [userId];
 
-      // 总数同样排除当前用户已隐藏的动态
-      const [countResult] = await connection.query(
-        'SELECT COUNT(*) as total FROM moments WHERE NOT (is_deleted_by_owner = 1 AND user_id = ?)',
-        [userId]
-      );
-      const total = countResult[0].total;
+      if (filter === 'friends') {
+        // 过滤：仅看自己以及好友的动态
+        filterQuery = 'AND (m.user_id = ? OR m.user_id IN (SELECT friend_id FROM friends WHERE user_id = ?))';
+        queryParams.push(userId, userId);
+        
+        let countFilterQuery = 'AND (user_id = ? OR user_id IN (SELECT friend_id FROM friends WHERE user_id = ?))';
+        countParams.push(userId, userId);
+        
+        // 查询动态列表
+        const [moments] = await connection.query(
+          `SELECT m.id, m.user_id, m.pet_id, m.content, m.image, m.likes_count, m.comments_count, m.created_at,
+                  u.username, u.avatar, p.name as pet_name,
+                  CASE WHEN l.id IS NOT NULL THEN true ELSE false END as is_liked,
+                  CASE WHEN c.id IS NOT NULL THEN true ELSE false END as is_commented
+           FROM moments m
+           JOIN users u ON m.user_id = u.id
+           LEFT JOIN pets p ON m.pet_id = p.id
+           LEFT JOIN likes l ON m.id = l.moment_id AND l.user_id = ?
+           LEFT JOIN comments c ON m.id = c.moment_id AND c.user_id = ?
+           WHERE NOT (m.is_deleted_by_owner = 1 AND m.user_id = ?) ${filterQuery}
+           ORDER BY m.created_at DESC
+           LIMIT ? OFFSET ?`,
+          [...queryParams, pageSize, offset]
+        );
 
-      const formattedMoments = moments.map(m => ({
-        id: m.id,
-        user: {
-          id: m.user_id,
-          username: m.username,
-          avatar: m.avatar
-        },
-        pet: m.pet_id ? {
-          id: m.pet_id,
-          name: m.pet_name
-        } : null,
-        content: m.content,
-        image: m.image,
-        likes_count: m.likes_count,
-        comments_count: m.comments_count,
-        is_liked: m.is_liked,
-        is_commented: m.is_commented,
-        created_at: m.created_at
-      }));
+        // 总数
+        const [countResult] = await connection.query(
+          `SELECT COUNT(*) as total FROM moments WHERE NOT (is_deleted_by_owner = 1 AND user_id = ?) ${countFilterQuery}`,
+          countParams
+        );
+        const total = countResult[0].total;
 
-      res.json(successResponse({
-        total,
-        page,
-        pageSize,
-        items: formattedMoments
-      }));
+        return formatAndSendMoments(res, moments, total, page, pageSize);
+      } else {
+        // 查询动态列表（全部）
+        const [moments] = await connection.query(
+          `SELECT m.id, m.user_id, m.pet_id, m.content, m.image, m.likes_count, m.comments_count, m.created_at,
+                  u.username, u.avatar, p.name as pet_name,
+                  CASE WHEN l.id IS NOT NULL THEN true ELSE false END as is_liked,
+                  CASE WHEN c.id IS NOT NULL THEN true ELSE false END as is_commented
+           FROM moments m
+           JOIN users u ON m.user_id = u.id
+           LEFT JOIN pets p ON m.pet_id = p.id
+           LEFT JOIN likes l ON m.id = l.moment_id AND l.user_id = ?
+           LEFT JOIN comments c ON m.id = c.moment_id AND c.user_id = ?
+           WHERE NOT (m.is_deleted_by_owner = 1 AND m.user_id = ?)
+           ORDER BY m.created_at DESC
+           LIMIT ? OFFSET ?`,
+          [...queryParams, pageSize, offset]
+        );
+
+        // 总数
+        const [countResult] = await connection.query(
+          'SELECT COUNT(*) as total FROM moments WHERE NOT (is_deleted_by_owner = 1 AND user_id = ?)',
+          countParams
+        );
+        const total = countResult[0].total;
+
+        return formatAndSendMoments(res, moments, total, page, pageSize);
+      }
     } finally {
       connection.release();
     }
@@ -69,6 +84,35 @@ const getMoments = async (req, res) => {
     console.error(error);
     res.status(500).json(errorResponse(500, '服务器错误'));
   }
+};
+
+const formatAndSendMoments = (res, moments, total, page, pageSize) => {
+  const formattedMoments = moments.map(m => ({
+    id: m.id,
+    user: {
+      id: m.user_id,
+      username: m.username,
+      avatar: m.avatar
+    },
+    pet: m.pet_id ? {
+      id: m.pet_id,
+      name: m.pet_name
+    } : null,
+    content: m.content,
+    image: m.image,
+    likes_count: m.likes_count,
+    comments_count: m.comments_count,
+    is_liked: m.is_liked,
+    is_commented: m.is_commented,
+    created_at: m.created_at
+  }));
+
+  res.json(successResponse({
+    total,
+    page,
+    pageSize,
+    items: formattedMoments
+  }));
 };
 
 // 发布动态

@@ -23,12 +23,12 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- =============================================
 -- 1. 用户数据（密码均为 password 的 bcrypt hash）
 -- =============================================
-INSERT INTO users (id, username, email, password, avatar, bio) VALUES
-(1, '金毛爱好者', 'golden@pawcircle.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'https://picsum.photos/seed/user1/100/100', '家有两只金毛，每天都是快乐满满'),
-(2, '布偶猫舍',   'ragdoll@pawcircle.com','$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'https://picsum.photos/seed/user2/100/100', '专业繁育布偶猫，温顺可爱'),
-(3, '柯基控',     'corgi@pawcircle.com',  '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'https://picsum.photos/seed/user3/100/100', '柯基才是世界上最可爱的狗狗'),
-(4, '铲屎官日记', 'diary@pawcircle.com',  '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'https://picsum.photos/seed/user4/100/100', '记录与猫咪的每一天'),
-(5, '测试用户',   'test@pawcircle.com',   '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'https://picsum.photos/seed/user5/100/100', '这是一个测试账号');
+INSERT INTO users (id, user_code, username, email, password, avatar, bio) VALUES
+(1, '10000001', '金毛爱好者', 'golden@pawcircle.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'https://picsum.photos/seed/user1/100/100', '家有两只金毛，每天都是快乐满满'),
+(2, '10000002', '布偶猫舍',   'ragdoll@pawcircle.com','$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'https://picsum.photos/seed/user2/100/100', '专业繁育布偶猫，温顺可爱'),
+(3, '10000003', '柯基控',     'corgi@pawcircle.com',  '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'https://picsum.photos/seed/user3/100/100', '柯基才是世界上最可爱的狗狗'),
+(4, '10000004', '铲屎官日记', 'diary@pawcircle.com',  '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'https://picsum.photos/seed/user4/100/100', '记录与猫咪的每一天'),
+(5, '10000005', '测试用户',   'test@pawcircle.com',   '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'https://picsum.photos/seed/user5/100/100', '这是一个测试账号');
 
 -- =============================================
 -- 2. 宠物档案

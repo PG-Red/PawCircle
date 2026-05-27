@@ -120,14 +120,16 @@ const sendLoginCode = async () => {
 const syncProfileAfterLogin = async () => {
   try {
     const profile = await userApi.getProfile();
+    if (profile.data?.user_code) localStorage.setItem('user_code', profile.data.user_code);
     if (profile.data?.avatar) localStorage.setItem('avatar', profile.data.avatar);
     else localStorage.removeItem('avatar');
   } catch {}
 };
 
-const saveLoginSession = async (data: { token: string; id: number; username: string }) => {
+const saveLoginSession = async (data: { token: string; id: number; user_code?: string; username: string }) => {
   localStorage.setItem('token', data.token);
   localStorage.setItem('userId', String(data.id));
+  if (data.user_code) localStorage.setItem('user_code', data.user_code);
   localStorage.setItem('username', data.username);
   await syncProfileAfterLogin();
   ElMessage.success('登录成功');
@@ -266,14 +268,14 @@ onMounted(() => {
           <button type="button" class="mode-pill" :class="{ active: loginMode === 'code' }" @click="loginMode = 'code'">验证码登录</button>
         </div>
         <el-form-item>
-          <el-input v-model="loginForm.email" placeholder="邮箱" :prefix-icon="Message" size="large" @keyup.enter="loginMode === 'password' ? handleLogin() : sendLoginCode()" />
+          <el-input v-model="loginForm.email" placeholder="邮箱" :prefix-icon="Message" size="large" @keydown.enter.prevent="loginMode === 'password' ? handleLogin() : sendLoginCode()" />
         </el-form-item>
         <el-form-item v-if="loginMode === 'password'">
-          <el-input v-model="loginForm.password" type="password" placeholder="密码" :prefix-icon="Lock" size="large" show-password @keyup.enter="handleLogin" />
+          <el-input v-model="loginForm.password" type="password" placeholder="密码" :prefix-icon="Lock" size="large" show-password />
         </el-form-item>
         <el-form-item v-else>
           <div class="verify-code-wrapper">
-            <el-input v-model="loginForm.code" maxlength="6" inputmode="numeric" placeholder="登录验证码" :prefix-icon="Key" size="large" @input="handleLoginCodeInput" @keyup.enter="handleLogin" />
+            <el-input v-model="loginForm.code" maxlength="6" inputmode="numeric" placeholder="登录验证码" :prefix-icon="Key" size="large" @input="handleLoginCodeInput" />
             <el-button class="send-code-btn" size="large" :disabled="loginCountdown > 0 || sendLoginCodeLoading" :loading="sendLoginCodeLoading" @click="sendLoginCode">
               {{ loginCountdown > 0 ? `${loginCountdown}s 后重发` : '获取验证码' }}
             </el-button>
@@ -281,7 +283,7 @@ onMounted(() => {
         </el-form-item>
         <el-form-item>
           <div class="captcha-wrapper">
-            <el-input v-model="loginForm.captchaCode" maxlength="4" placeholder="图形验证码" :prefix-icon="Key" size="large" @input="handleCaptchaCodeInput" @keyup.enter="handleLogin" />
+            <el-input v-model="loginForm.captchaCode" maxlength="4" placeholder="图形验证码" :prefix-icon="Key" size="large" @input="handleCaptchaCodeInput" />
             <button type="button" class="captcha-card" :disabled="captchaLoading" @click="loadCaptcha">
               <span v-if="captchaLoading" class="captcha-placeholder">加载中...</span>
               <span v-else-if="captcha.svg" class="captcha-image" v-html="captcha.svg"></span>
@@ -293,17 +295,17 @@ onMounted(() => {
       </el-form>
 
       <el-form v-else :model="registerForm" class="auth-form" @submit.prevent="handleRegister">
-        <el-form-item><el-input v-model="registerForm.username" placeholder="用户名" :prefix-icon="User" size="large" @keyup.enter="handleRegister" /></el-form-item>
-        <el-form-item><el-input v-model="registerForm.email" placeholder="邮箱" :prefix-icon="Message" size="large" @keyup.enter="sendCode" /></el-form-item>
+        <el-form-item><el-input v-model="registerForm.username" placeholder="用户名" :prefix-icon="User" size="large" /></el-form-item>
+        <el-form-item><el-input v-model="registerForm.email" placeholder="邮箱" :prefix-icon="Message" size="large" @keydown.enter.prevent="sendCode" /></el-form-item>
         <el-form-item>
           <div class="verify-code-wrapper">
-            <el-input v-model="registerForm.code" maxlength="6" inputmode="numeric" placeholder="邮箱验证码" :prefix-icon="Key" size="large" @input="handleRegisterCodeInput" @keyup.enter="handleRegister" />
+            <el-input v-model="registerForm.code" maxlength="6" inputmode="numeric" placeholder="邮箱验证码" :prefix-icon="Key" size="large" @input="handleRegisterCodeInput" />
             <el-button class="send-code-btn" size="large" :disabled="registerCountdown > 0 || sendCodeLoading" :loading="sendCodeLoading" @click="sendCode">
               {{ registerCountdown > 0 ? `${registerCountdown}s 后重发` : '获取验证码' }}
             </el-button>
           </div>
         </el-form-item>
-        <el-form-item><el-input v-model="registerForm.password" type="password" placeholder="密码" :prefix-icon="Lock" size="large" show-password @keyup.enter="handleRegister" /></el-form-item>
+        <el-form-item><el-input v-model="registerForm.password" type="password" placeholder="密码" :prefix-icon="Lock" size="large" show-password /></el-form-item>
         <el-button type="primary" native-type="submit" class="submit-btn" size="large" :loading="registerLoading">注册</el-button>
       </el-form>
 

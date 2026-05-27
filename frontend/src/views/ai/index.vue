@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { Promotion } from '@element-plus/icons-vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { aiApi } from '@/api/index';
 
+const route = useRoute();
 const renderMd = (t: string) => t ? DOMPurify.sanitize(marked.parse(t) as string) : '';
 
 const userInput = ref('');
@@ -37,6 +39,14 @@ const sendMessage = async () => {
     scrollToBottom();
   }
 };
+
+onMounted(() => {
+  const q = route.query.q;
+  if (q && typeof q === 'string' && q.trim()) {
+    userInput.value = q.trim();
+    sendMessage();
+  }
+});
 </script>
 
 <template>

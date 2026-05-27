@@ -2,15 +2,17 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 // JWT 相关函数
+const getJwtSecret = () => process.env.JWT_SECRET || 'please-set-jwt-secret';
+
 const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET || 'secret', {
+  return jwt.sign({ userId }, getJwtSecret(), {
     expiresIn: process.env.JWT_EXPIRE || '24h'
   });
 };
 
 const verifyToken = (token) => {
   try {
-    return jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    return jwt.verify(token, getJwtSecret());
   } catch (error) {
     return null;
   }

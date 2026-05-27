@@ -99,6 +99,38 @@
       </el-tabs>
     </div>
   </el-drawer>
+
+  <el-dialog v-model="cropDialogVisible" title="裁剪头像" width="380px" align-center :close-on-click-modal="false" append-to-body>
+    <div class="crop-container"
+      @pointerdown="onPointerDown"
+      @pointermove="onPointerMove"
+      @pointerup="onPointerUp"
+      @pointercancel="onPointerUp"
+    >
+      <img
+        v-if="rawImgObj"
+        :src="rawImgObj.src"
+        class="crop-image"
+        :style="{
+          transform: `translate(${cropX}px, ${cropY}px) scale(${cropZoom})`,
+          transformOrigin: '0 0'
+        }"
+        draggable="false"
+      />
+      <div class="crop-overlay"></div>
+    </div>
+    <div class="crop-controls">
+      <span class="zoom-icon">−</span>
+      <el-slider v-model="cropZoom" :min="cropMinZoom" :max="cropMinZoom * 3" :step="0.01" :show-tooltip="false" style="flex:1;" />
+      <span class="zoom-icon">+</span>
+    </div>
+    <template #footer>
+      <div class="dialog-footer">
+        <el-button class="cancel-btn" @click="cropDialogVisible = false">取消</el-button>
+        <el-button type="primary" class="save-btn" @click="handleCropConfirm">确认裁剪</el-button>
+      </div>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
@@ -107,6 +139,7 @@ import { Lock, User, Camera, Loading } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { userApi, commentApi } from '@/api/index';
 import type { Comment } from '@/api/comment';
+import { defaultAvatar } from '@/utils/constants';
 
 // v-model:visible
 const props = defineProps<{ modelValue: boolean }>();
@@ -123,10 +156,87 @@ watch(visible, v => { emit('update:modelValue', v); });
 const activeTab = ref('info');
 const saving = ref(false);
 const avatarInputRef = ref<HTMLInputElement | null>(null);
-const defaultAvatar = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%23FBBF24'/><text font-size='56' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='central'>🐾</text></svg>`;
 
 const form = reactive({ username: '', avatar: '', bio: '' });
 const pwdForm = reactive({ old_password: '', new_password: '', confirm_password: '' });
+
+// 裁剪相关状态
+const cropDialogVisible = ref(false);
+const rawImgObj = ref<HTMLImageElement | null>(null);
+const cropZoom = ref(1);
+const cropMinZoom = ref(1);
+const cropX = ref(0);
+const cropY = ref(0);
+const containerSize = 300;
+
+let isDragging = false;
+let startPointerX = 0;
+let startPointerY = 0;
+let initialCropX = 0;
+let initialCropY = 0;
+
+const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(val, max));
+
+const updateCropConstraints = () => {
+  if (!rawImgObj.value) return;
+  const img = rawImgObj.value;
+  const minX = containerSize - img.width * cropZoom.value;
+  const minY = containerSize - img.height * cropZoom.value;
+  cropX.value = clamp(cropX.value, minX, 0);
+  cropY.value = clamp(cropY.value, minY, 0);
+};
+
+watch(cropZoom, updateCropConstraints);
+
+const onPointerDown = (e: PointerEvent) => {
+  isDragging = true;
+  startPointerX = e.clientX;
+  startPointerY = e.clientY;
+  initialCropX = cropX.value;
+  initialCropY = cropY.value;
+  (e.target as HTMLElement).setPointerCapture(e.pointerId);
+};
+
+const onPointerMove = (e: PointerEvent) => {
+  if (!isDragging) return;
+  const dx = e.clientX - startPointerX;
+  const dy = e.clientY - startPointerY;
+  
+  if (!rawImgObj.value) return;
+  const img = rawImgObj.value;
+  const minX = containerSize - img.width * cropZoom.value;
+  const minY = containerSize - img.height * cropZoom.value;
+  
+  cropX.value = clamp(initialCropX + dx, minX, 0);
+  cropY.value = clamp(initialCropY + dy, minY, 0);
+};
+
+const onPointerUp = (e: PointerEvent) => {
+  isDragging = false;
+  (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+};
+
+const handleCropConfirm = () => {
+  if (!rawImgObj.value) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = 200;
+  canvas.height = 200;
+  const ctx = canvas.getContext('2d')!;
+  
+  ctx.drawImage(
+    rawImgObj.value,
+    -cropX.value / cropZoom.value,
+    -cropY.value / cropZoom.value,
+    containerSize / cropZoom.value,
+    containerSize / cropZoom.value,
+    0,
+    0,
+    200,
+    200
+  );
+  form.avatar = canvas.toDataURL('image/jpeg', 0.8);
+  cropDialogVisible.value = false;
+};
 
 // 我的评论
 const myComments = ref<(Comment & { moment_content?: string })[]>([]);
@@ -189,18 +299,18 @@ const handleAvatarUpload = (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (!file) return;
   if (!file.type.startsWith('image/')) { ElMessage.warning('请选择图片文件'); return; }
-  if (file.size > 2 * 1024 * 1024)    { ElMessage.warning('图片大小不能超过 2MB'); return; }
+  if (file.size > 5 * 1024 * 1024)    { ElMessage.warning('图片大小不能超过 5MB'); return; }
   const reader = new FileReader();
   reader.onload = ev => {
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const MAX = 200;
-      const scale = Math.min(MAX / img.width, MAX / img.height, 1);
-      canvas.width  = img.width  * scale;
-      canvas.height = img.height * scale;
-      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-      form.avatar = canvas.toDataURL('image/jpeg', 0.7);
+      rawImgObj.value = img;
+      const minZ = Math.max(containerSize / img.width, containerSize / img.height);
+      cropMinZoom.value = minZ;
+      cropZoom.value = minZ;
+      cropX.value = (containerSize - img.width * minZ) / 2;
+      cropY.value = (containerSize - img.height * minZ) / 2;
+      cropDialogVisible.value = true;
     };
     img.src = ev.target?.result as string;
   };
@@ -432,6 +542,58 @@ const savePassword = async () => {
   font-size: 11px;
   color: var(--text-secondary);
   font-weight: 600;
+}
+
+/* 裁剪弹窗相关样式 */
+.crop-container {
+  width: 300px;
+  height: 300px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  background: #f5f5f5;
+  border-radius: 8px;
+  cursor: grab;
+  touch-action: none;
+}
+.crop-container:active {
+  cursor: grabbing;
+}
+.crop-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  max-width: none !important;
+  max-height: none !important;
+}
+.crop-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: 50%;
+  box-shadow: 0 0 0 999px rgba(0,0,0,0.5);
+  border: 2px solid var(--primary-yellow);
+  pointer-events: none;
+}
+.crop-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px auto 0;
+  width: 300px;
+}
+.zoom-icon {
+  font-size: 20px;
+  font-weight: bold;
+  color: #666;
+  user-select: none;
+  cursor: default;
 }
 </style>
 

@@ -3,7 +3,8 @@
  * 统一请求工具，基于 fetch 封装，含 token 注入、401 拦截
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api' || 'http://localhost:3101/api';
+// const BASE_URL = import.meta.env.VITE_API_URL || '/api' || 'http://localhost:3000/api';
 
 const getToken = () => localStorage.getItem('token');
 

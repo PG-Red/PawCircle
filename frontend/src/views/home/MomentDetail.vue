@@ -5,6 +5,7 @@ import { ElMessage } from 'element-plus';
 import { ChatRound, Star, ArrowLeft } from '@element-plus/icons-vue';
 import { momentApi } from '@/api/index';
 import type { Moment } from '@/api/moment';
+import { defaultAvatar } from '@/utils/constants';
 
 const route = useRoute();
 const router = useRouter();
@@ -68,7 +69,7 @@ const goHome = () => router.push('/');
         <div class="moment-card">
           <!-- 头部 -->
           <div class="card-header">
-            <el-avatar :size="52" :src="moment.user.avatar" class="user-avatar" />
+            <el-avatar :size="52" :src="moment.user.avatar || defaultAvatar" class="user-avatar" />
             <div class="user-meta">
               <span class="username">{{ moment.user.username }}</span>
               <span class="time">{{ formatTime(moment.created_at) }}</span>
@@ -79,7 +80,7 @@ const goHome = () => router.push('/');
           <div class="card-content">
             <p class="content-text">{{ moment.content }}</p>
             <div v-if="moment.image" class="image-wrap">
-              <el-image :src="moment.image" fit="cover" class="moment-img" referrerPolicy="no-referrer" />
+              <el-image :src="moment.image" fit="cover" class="moment-img" referrerPolicy="no-referrer" lazy />
             </div>
           </div>
 

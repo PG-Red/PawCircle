@@ -4,19 +4,19 @@ import { ElMessage } from 'element-plus';
 import { Picture } from '@element-plus/icons-vue';
 import { momentApi } from '@/api/index';
 import { eventBus } from '@/utils/eventBus';
+import { defaultAvatar } from '@/utils/constants';
 
 const emit = defineEmits<{ (e: 'created'): void }>();
 const content = ref('');
 const imageUrl = ref('');
 const submitting = ref(false);
 const fileInputRef = ref<HTMLInputElement | null>(null);
-const DEFAULT_AVATAR = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%23FBBF24'/><text font-size='56' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='central'>🐾</text></svg>`;
-const currentAvatar = ref(localStorage.getItem('avatar') || DEFAULT_AVATAR);
-const avatarUrl = computed(() => currentAvatar.value || DEFAULT_AVATAR);
+const currentAvatar = ref(localStorage.getItem('avatar') || defaultAvatar);
+const avatarUrl = computed(() => currentAvatar.value || defaultAvatar);
 
 const syncAvatar = (url?: unknown) => {
   const nextAvatar = typeof url === 'string' ? url : localStorage.getItem('avatar');
-  currentAvatar.value = nextAvatar || DEFAULT_AVATAR;
+  currentAvatar.value = nextAvatar || defaultAvatar;
 };
 
 const triggerUpload = () => fileInputRef.value?.click();
@@ -82,7 +82,7 @@ export default { name: 'CreateMoment' };
       <div class="create-right">
         <textarea v-model="content" class="create-textarea" placeholder="分享你和毛孩子的美好瞬间..." :maxlength="500" />
         <div v-if="imageUrl" class="preview-wrapper">
-          <el-image :src="imageUrl" fit="cover" class="preview-img" />
+          <el-image :src="imageUrl" fit="cover" class="preview-img" lazy />
           <button class="remove-img" @click="imageUrl = ''">×</button>
         </div>
         <div class="create-actions">

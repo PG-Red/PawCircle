@@ -7,6 +7,7 @@ const svgCaptcha = require('svg-captcha');
 const verificationStores = {
   register: new Map(),
   login: new Map(),
+  changePassword: new Map(),
 };
 
 const captchaStore = new Map();
@@ -14,13 +15,65 @@ const CAPTCHA_EXPIRE = parseInt(process.env.CAPTCHA_EXPIRE || '300000', 10);
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const createUserCodeCandidate = () => String(Math.floor(10000000 + Math.random() * 90000000));
+
+const generateUniqueUserCode = async (connection) => {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const userCode = createUserCodeCandidate();
+    const [existingRows] = await connection.query(
+      'SELECT id FROM users WHERE user_code = ? LIMIT 1',
+      [userCode]
+    );
+
+    if (existingRows.length === 0) {
+      return userCode;
+    }
+  }
+
+  throw new Error('生成用户编号失败，请稍后重试');
+};
+
+const ensureUserCode = async (connection, user) => {
+  if (!user || !user.id) {
+    throw new Error('缺少用户信息，无法生成用户编号');
+  }
+
+  // 如果已经有 user_code，且不是旧的补零编号（如 00000008），则直接返回
+  if (user.user_code && user.user_code !== String(user.id).padStart(8, '0')) {
+    return String(user.user_code);
+  }
+
+  const userCode = await generateUniqueUserCode(connection);
+  const [updateResult] = await connection.query(
+    "UPDATE users SET user_code = ? WHERE id = ? AND (user_code IS NULL OR user_code = '' OR user_code = LPAD(id, 8, '0'))",
+    [userCode, user.id]
+  );
+
+  if (updateResult.affectedRows > 0) {
+    user.user_code = userCode;
+    return userCode;
+  }
+
+  const [latestRows] = await connection.query(
+    'SELECT user_code FROM users WHERE id = ? LIMIT 1',
+    [user.id]
+  );
+
+  if (latestRows.length > 0 && latestRows[0].user_code) {
+    user.user_code = String(latestRows[0].user_code);
+    return user.user_code;
+  }
+
+  throw new Error('生成用户编号失败，请稍后重试');
+};
+
 const createMailTransporter = () => nodemailer.createTransport({
-  host: 'smtp.163.com',
-  port: 465,
-  secure: true,
+  host: process.env.MAIL_HOST || 'smtp.163.com',
+  port: Number(process.env.MAIL_PORT || 465),
+  secure: String(process.env.MAIL_SECURE || 'true') === 'true',
   auth: {
-    user: process.env.MAIL_USER || 'qq1742383050@163.com',
-    pass: process.env.MAIL_PASS || 'ZLi4PcEC8aL6kgDe'
+    user: process.env.MAIL_USER,
+    pass: process.env.MAIL_PASS
   }
 });
 
@@ -138,7 +191,7 @@ const sendEmailCode = async (scene, email, subject, introText, buttonText) => {
 
   const transporter = createMailTransporter();
   await transporter.sendMail({
-    from: `"PawCircle" <${process.env.MAIL_USER || 'qq1742383050@163.com'}>`,
+    from: `"${process.env.MAIL_FROM_NAME || 'PawCircle'}" <${process.env.MAIL_USER}>`,
     to: email,
     subject,
     html: `
@@ -245,9 +298,10 @@ const register = async (req, res) => {
       }
 
       const hashedPassword = await hashPassword(password);
+      const userCode = await generateUniqueUserCode(connection);
       const [result] = await connection.query(
-        'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
-        [username, email, hashedPassword]
+        'INSERT INTO users (username, email, password, user_code) VALUES (?, ?, ?, ?)',
+        [username, email, hashedPassword, userCode]
       );
 
       const userId = result.insertId;
@@ -257,6 +311,7 @@ const register = async (req, res) => {
 
       res.json(successResponse({
         id: userId,
+        user_code: userCode,
         username,
         email,
         token
@@ -292,7 +347,7 @@ const login = async (req, res) => {
 
     try {
       const [users] = await connection.query(
-        'SELECT id, username, email, password, avatar FROM users WHERE email = ?',
+        'SELECT id, user_code, username, email, password, avatar FROM users WHERE email = ?',
         [email]
       );
 
@@ -315,10 +370,12 @@ const login = async (req, res) => {
         }
       }
 
+      const userCode = await ensureUserCode(connection, user);
       const token = generateToken(user.id);
 
       res.json(successResponse({
         id: user.id,
+        user_code: userCode,
         username: user.username,
         email: user.email,
         avatar: user.avatar,
@@ -333,10 +390,43 @@ const login = async (req, res) => {
   }
 };
 
+// 发送修改密码验证码（需登录，发送到当前用户绑定邮箱）
+const sendChangePasswordCode = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const connection = await pool.getConnection();
+    let email;
+    try {
+      const [users] = await connection.query('SELECT email FROM users WHERE id = ?', [userId]);
+      if (users.length === 0) {
+        return res.status(404).json(errorResponse(404, '用户不存在'));
+      }
+      email = users[0].email;
+    } finally {
+      connection.release();
+    }
+
+    const result = await sendEmailCode('changePassword', email, 'PawCircle 修改密码验证码', '你正在通过邮箱验证码修改密码，验证码为：', '修改密码');
+    if (result.error) {
+      return res.status(429).json(errorResponse(429, result.error));
+    }
+
+    console.log(`修改密码验证码已发送到 ${email}: ${result.code}`);
+    res.json(successResponse(null, '验证码已发送'));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json(errorResponse(500, '服务器错误'));
+  }
+};
+
 module.exports = {
   getCaptcha,
   sendVerificationCode,
   sendLoginCode,
   register,
-  login
+  login,
+  sendChangePasswordCode,
+  validateVerificationCode,
+  clearVerificationCode,
+  ensureUserCode,
 };

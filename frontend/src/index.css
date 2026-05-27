@@ -33,6 +33,7 @@ body {
   margin: 0;
   overflow-y: auto;
   scrollbar-width: none;
+  padding-right: 0 !important;
 }
 
 body::-webkit-scrollbar {

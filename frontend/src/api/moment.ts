@@ -22,10 +22,10 @@ export interface Moment {
 }
 
 // 获取动态列表
-export const getMomentsService = (page = 1, pageSize = 10) =>
+export const getMomentsService = (page = 1, pageSize = 10, filter: 'all' | 'friends' = 'all') =>
   request<ApiResponse<PaginatedResponse<Moment>>>(
     'GET',
-    `/moments?page=${page}&pageSize=${pageSize}`
+    `/moments?page=${page}&pageSize=${pageSize}&filter=${filter}`
   );
 
 // 发布动态

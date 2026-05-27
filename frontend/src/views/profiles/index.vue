@@ -4,6 +4,7 @@ import { Plus } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import PetCard from './components/PetCard.vue';
 import PetFormDialog from './components/PetFormDialog.vue';
+import PetDetailDialog from '@/components/PetDetailDialog.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { petApi, type Pet } from '@/api/index';
 
@@ -35,16 +36,7 @@ const openAdd = () => { editingPet.value = null; dialogVisible.value = true; };
 const openEdit = (pet: Pet) => { editingPet.value = pet; dialogVisible.value = true; };
 const onDetail = async (pet: Pet) => {
   detailDialogVisible.value = true;
-  detailLoading.value = true;
-  try {
-    const res = await petApi.getPet(pet.id);
-    detailPet.value = res.data;
-  } catch {
-    detailPet.value = pet;
-    ElMessage.error('加载详情失败，已显示当前信息');
-  } finally {
-    detailLoading.value = false;
-  }
+  detailPet.value = pet; // 优先复用已有信息，如果请求失败也能显示
 };
 
 const onDelete = (pet: Pet) => {
@@ -64,17 +56,6 @@ const confirmDelete = async () => {
   } finally {
     pendingDeletePet.value = null;
   }
-};
-
-const calcAge = (birthday: string) => {
-  if (!birthday) return '未知';
-  const years = new Date().getFullYear() - new Date(birthday).getFullYear();
-  return years > 0 ? `${years}岁` : '不足1岁';
-};
-
-const formatBirthday = (birthday: string) => {
-  if (!birthday) return '-';
-  return birthday.slice(0, 10);
 };
 </script>
 
@@ -104,36 +85,11 @@ const formatBirthday = (birthday: string) => {
     </el-row>
     <PetFormDialog v-model="dialogVisible" :pet="editingPet" @saved="loadPets" />
 
-    <el-dialog v-model="detailDialogVisible" title="宠物详情" width="520px" align-center>
-      <div v-loading="detailLoading" class="detail-content">
-        <template v-if="detailPet">
-          <el-image :src="detailPet.image" class="detail-image" fit="cover" referrerPolicy="no-referrer" />
-          <h3 class="detail-name">{{ detailPet.name }}</h3>
-          <div class="detail-list">
-            <div class="detail-row">
-              <span class="detail-label">品种</span>
-              <span class="detail-value">{{ detailPet.breed }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">性别</span>
-              <span class="detail-value">{{ detailPet.gender }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">年龄</span>
-              <span class="detail-value">{{ calcAge(detailPet.birthday) }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">生日</span>
-              <span class="detail-value">{{ formatBirthday(detailPet.birthday) }}</span>
-            </div>
-          </div>
-          <div class="detail-desc">
-            <div class="detail-desc-title">宠物描述</div>
-            <p>{{ detailPet.description || '这个小家伙还没有留下介绍～' }}</p>
-          </div>
-        </template>
-      </div>
-    </el-dialog>
+    <PetDetailDialog
+      v-model="detailDialogVisible"
+      :pet-id="detailPet?.id || null"
+      :initial-data="detailPet"
+    />
   </div>
 </template>
 
@@ -169,69 +125,6 @@ const formatBirthday = (birthday: string) => {
   color: var(--text-secondary);
   font-size: 16px;
   font-weight: 600;
-}
-
-.detail-content {
-  min-height: 240px;
-}
-
-.detail-image {
-  width: 100%;
-  height: 220px;
-  border-radius: var(--border-radius-md);
-  margin-bottom: 16px;
-}
-
-.detail-name {
-  margin: 0 0 14px;
-  font-size: 24px;
-  font-weight: 900;
-  color: var(--dark-charcoal);
-}
-
-.detail-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  padding-bottom: 10px;
-  border-bottom: 2px dashed #f0f0f0;
-}
-
-.detail-label {
-  color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.detail-value {
-  color: var(--dark-charcoal);
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.detail-desc {
-  background: var(--bg-color);
-  border-radius: var(--border-radius-md);
-  padding: 14px;
-}
-
-.detail-desc-title {
-  font-weight: 800;
-  color: var(--dark-charcoal);
-  margin-bottom: 8px;
-}
-
-.detail-desc p {
-  margin: 0;
-  color: var(--text-secondary);
-  line-height: 1.7;
-  font-size: 14px;
 }
 
 :deep(.el-dialog) {

@@ -12,7 +12,9 @@
           <span>PawTrace</span>
         </router-link>
         <router-link to="/chat" class="nav-item" active-class="active">
-          <el-icon><Message /></el-icon>
+          <el-badge :value="unreadTotal" :hidden="unreadTotal === 0" :max="99" class="nav-badge">
+            <el-icon><Message /></el-icon>
+          </el-badge>
           <span>好友私聊</span>
         </router-link>
         <router-link to="/profiles" class="nav-item" active-class="active">
@@ -23,10 +25,7 @@
           <el-icon><Calendar /></el-icon>
           <span>喂养</span>
         </router-link>
-        <router-link to="/trading" class="nav-item" active-class="active">
-          <el-icon><ShoppingCart /></el-icon>
-          <span>交易</span>
-        </router-link>
+
         <router-link to="/ai-assistant" class="nav-item" active-class="active">
           <el-icon><ChatDotRound /></el-icon>
           <span>AI 助手</span>
@@ -34,6 +33,29 @@
       </nav>
 
       <div class="header-actions">
+        <!-- 首页动态范围切换开关 -->
+        <el-radio-group 
+          v-if="route.path === '/'" 
+          v-model="momentFilter" 
+          size="small" 
+          class="moment-filter-group"
+          @change="handleFilterChange"
+        >
+          <el-radio-button label="all">全部</el-radio-button>
+          <el-radio-button label="friends">好友</el-radio-button>
+        </el-radio-group>
+
+        <!-- 添加好友按钮，仅在私聊页面显示 -->
+        <el-tooltip v-if="route.path === '/chat'" content="添加好友" placement="bottom">
+          <el-button 
+            circle 
+            class="global-add-friend-btn" 
+            @click="handleAddFriend"
+          >
+            <el-icon><Plus /></el-icon>
+          </el-button>
+        </el-tooltip>
+
         <!-- 头像 + 下拉菜单 -->
         <div class="avatar-menu-wrapper" ref="menuWrapperRef">
           <div class="avatar-btn" @click="toggleMenu">
@@ -64,6 +86,11 @@
               <button class="dropdown-item" @click="goTo('password')">
                 <el-icon><Lock /></el-icon>
                 <span>修改密码</span>
+                <el-icon class="item-arrow"><ArrowRight /></el-icon>
+              </button>
+              <button class="dropdown-item" @click="goTo('settings')">
+                <el-icon><Setting /></el-icon>
+                <span>设置</span>
                 <el-icon class="item-arrow"><ArrowRight /></el-icon>
               </button>
               <div class="dropdown-divider"></div>
@@ -109,20 +136,31 @@ import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import {
-  House, Postcard, Calendar, ShoppingCart, ChatDotRound, Message,
-  SwitchButton, User, Lock, ArrowDown, ArrowRight
+  House, Postcard, Calendar, ChatDotRound, Message,
+  SwitchButton, User, Lock, ArrowDown, ArrowRight, Setting, Plus
 } from '@element-plus/icons-vue';
 import { userApi } from '@/api/index';
 import { eventBus } from '@/utils/eventBus';
+import { defaultAvatar } from '@/utils/constants';
+import { unreadTotal } from '@/utils/unreadState';
 
 const router  = useRouter();
 const route   = useRoute();
 const menuOpen = ref(false);
 const menuWrapperRef = ref<HTMLElement | null>(null);
 
-const DEFAULT_AVATAR = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%23FBBF24'/><text font-size='56' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='central'>🐾</text></svg>`;
-const avatarUrl = ref(localStorage.getItem('avatar') || DEFAULT_AVATAR);
+const handleAddFriend = () => {
+  eventBus.emit('open-add-friend', undefined);
+};
+
+const avatarUrl = ref(localStorage.getItem('avatar') || defaultAvatar);
 const username  = ref(localStorage.getItem('username') || '用户');
+const momentFilter = ref<'all' | 'friends'>(localStorage.getItem('momentFilter') as 'all' | 'friends' || 'all');
+
+const handleFilterChange = (val: string | number | boolean) => {
+  localStorage.setItem('momentFilter', val as string);
+  eventBus.emit('moment-filter-changed', val);
+};
 
 const fetchProfile = async () => {
   if (!localStorage.getItem('token')) return;
@@ -132,7 +170,7 @@ const fetchProfile = async () => {
       avatarUrl.value = res.data.avatar;
       localStorage.setItem('avatar', res.data.avatar);
     } else {
-      avatarUrl.value = DEFAULT_AVATAR;
+      avatarUrl.value = defaultAvatar;
       localStorage.removeItem('avatar');
     }
     if (res.data?.username) {
@@ -165,7 +203,7 @@ const onClickOutside = (e: MouseEvent) => {
   }
 };
 
-const goTo = (section: 'info' | 'comments' | 'password') => {
+const goTo = (section: 'info' | 'comments' | 'password' | 'settings') => {
   menuOpen.value = false;
   router.push(`/user/${section}`);
 };
@@ -180,6 +218,7 @@ const handleLogout = () => {
 const confirmLogout = () => {
   logoutDialogVisible.value = false;
   localStorage.removeItem('token');
+  localStorage.removeItem('userId');
   localStorage.removeItem('username');
   localStorage.removeItem('avatar');
   ElMessage.success('已退出登录');
@@ -222,7 +261,55 @@ const confirmLogout = () => {
 .nav-item:hover { background-color: var(--bg-color); color: var(--dark-charcoal); }
 .nav-item.active { background-color: var(--primary-yellow); color: var(--dark-charcoal); }
 
+.nav-badge :deep(.el-badge__content) {
+  top: 0px;
+  right: 0px;
+  transform: scale(0.85) translate(50%, -50%);
+  border: none;
+}
+
 .header-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+
+.global-add-friend-btn {
+  border-color: #f0f0f0;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+.global-add-friend-btn:hover {
+  background: var(--primary-yellow);
+  border-color: var(--primary-yellow);
+  color: var(--dark-charcoal);
+  transform: rotate(90deg);
+}
+
+.moment-filter-group {
+  margin-right: 8px;
+}
+.moment-filter-group :deep(.el-radio-button__inner) {
+  border-radius: var(--border-radius-pill) !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
+  padding: 6px 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: var(--bg-color);
+  box-shadow: none !important;
+}
+.moment-filter-group :deep(.el-radio-button:first-child .el-radio-button__inner) {
+  border-right: none !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+.moment-filter-group :deep(.el-radio-button:last-child .el-radio-button__inner) {
+  border-left: none !important;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+.moment-filter-group :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  background-color: var(--primary-yellow);
+  color: var(--dark-charcoal);
+  border-color: var(--primary-yellow) !important;
+}
 
 /* 头像菜单 */
 .avatar-menu-wrapper { position: relative; }

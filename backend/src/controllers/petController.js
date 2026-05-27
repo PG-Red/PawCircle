@@ -67,9 +67,40 @@ const addPet = async (req, res) => {
         'INSERT INTO pets (user_id, name, breed, gender, birthday, image, description) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [userId, name, breed, gender, birthday, image, description]
       );
+      
+      const newPetId = result.insertId;
+
+      // 自动继承共有打卡活动逻辑
+      // 1. 获取除新宠物外，用户当前拥有的宠物数量
+      const [oldPets] = await connection.query(
+        'SELECT id FROM pets WHERE user_id = ? AND id != ?',
+        [userId, newPetId]
+      );
+      const oldPetCount = oldPets.length;
+
+      if (oldPetCount > 0) {
+        // 2. 找到"每一个旧宠物"都有的打卡活动（根据关键字段分组）
+        const [commonRoutines] = await connection.query(`
+          SELECT task_type, title, task_time, frequency_type, frequency_value, COUNT(DISTINCT pet_id) as p_count
+          FROM pet_routines
+          WHERE pet_id IN (SELECT id FROM pets WHERE user_id = ? AND id != ?)
+          GROUP BY task_type, title, task_time, frequency_type, frequency_value
+          HAVING p_count = ?
+        `, [userId, newPetId, oldPetCount]);
+
+        // 3. 将这些共有打卡活动复制给新宠物
+        if (commonRoutines.length > 0) {
+          for (const routine of commonRoutines) {
+            await connection.query(
+              'INSERT INTO pet_routines (pet_id, task_type, title, task_time, frequency_type, frequency_value) VALUES (?, ?, ?, ?, ?, ?)',
+              [newPetId, routine.task_type, routine.title, routine.task_time, routine.frequency_type, routine.frequency_value]
+            );
+          }
+        }
+      }
 
       res.json(successResponse({
-        id: result.insertId,
+        id: newPetId,
         name,
         breed,
         gender,
@@ -81,7 +112,7 @@ const addPet = async (req, res) => {
       connection.release();
     }
   } catch (error) {
-    console.error(error);
+    console.error('addPet error:', error);
     res.status(500).json(errorResponse(500, '服务器错误'));
   }
 };
@@ -124,7 +155,7 @@ const updatePet = async (req, res) => {
       connection.release();
     }
   } catch (error) {
-    console.error(error);
+    console.error('updatePet error:', error);
     res.status(500).json(errorResponse(500, '服务器错误'));
   }
 };
